@@ -3,59 +3,65 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import { env } from "./config/env.js";
+import { errorHandler } from "./middleware/errorHandler.js";
+import { logger } from "./lib/logger.js";
 
 export const app = express();
 
-// Security and utility middleware
+// Security Middleware
 app.use(helmet());
 app.use(
   cors({
     origin: env.CORS_ORIGIN,
-    credentials: true
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Company-Id"]
   })
 );
-app.use(express.json());
+
+// Body and Cookie Parsing Middleware
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-// Health Check Endpoint
+// Request logging middleware (non-test environments)
+if (env.NODE_ENV !== "test") {
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    logger.info({ method: req.method, url: req.url }, "Incoming request");
+    next();
+  });
+}
+
+// Health Check Endpoint (Section 8 Acceptance Criteria)
 app.get("/health", (_req: Request, res: Response) => {
   res.status(200).json({
     status: "ok",
     timestamp: new Date().toISOString(),
-    environment: env.NODE_ENV
+    environment: env.NODE_ENV,
+    uptime: process.uptime()
   });
 });
 
-// API Base route placeholder
+// API Base Information Endpoint
 app.get("/api", (_req: Request, res: Response) => {
   res.status(200).json({
     data: {
       name: "Enterprise Accounting & Inventory ERP API",
       version: "1.0.0",
-      status: "running"
+      status: "operational"
     }
   });
 });
 
-// 404 Handler
-app.use((_req: Request, res: Response) => {
+// 404 Catch-All Handler
+app.use((req: Request, res: Response) => {
   res.status(404).json({
     error: {
       code: "NOT_FOUND",
-      message: "The requested resource was not found"
+      message: `Cannot ${req.method} ${req.path}`
     }
   });
 });
 
-// Global Error Handler conforming to API conventions
-app.use((err: Error, _req: Request, res: Response, _next: NextFunction) => {
-  const isDev = env.NODE_ENV === "development";
-  res.status(500).json({
-    error: {
-      code: "INTERNAL_SERVER_ERROR",
-      message: err.message || "An unexpected error occurred",
-      ...(isDev ? { stack: err.stack } : {})
-    }
-  });
-});
-
+// Centralized Error Handling Middleware
+app.use(errorHandler);

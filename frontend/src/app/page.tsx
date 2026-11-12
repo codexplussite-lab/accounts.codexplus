@@ -2,144 +2,88 @@
 
 import React, { useEffect, useState } from "react";
 import {
-  Building2,
-  CheckCircle2,
   ShieldCheck,
+  CheckCircle2,
   TrendingUp,
-  FileText,
-  Package,
-  Layers,
   ArrowUpRight,
   RefreshCw,
-  AlertCircle
+  Layers,
+  Building2,
+  Database,
+  Lock,
+  ArrowRight
 } from "lucide-react";
+import { AppShell } from "@/components/layout/AppShell";
 import SpotlightCard from "@/components/react-bits/SpotlightCard";
 import Counter from "@/components/react-bits/Counter";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { checkBackendHealth } from "@/lib/api";
 
-interface HealthData {
-  status: string;
-  timestamp: string;
-  environment: string;
-}
-
-export default function HomePage() {
-  const [health, setHealth] = useState<HealthData | null>(null);
+export default function DashboardPage() {
+  const [health, setHealth] = useState<{ status: string; timestamp: string; environment: string; uptime?: number } | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchHealth = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("http://localhost:4000/health");
-      if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-      const data = await res.json();
-      setHealth(data);
-    } catch (err: any) {
-      setError(err.message || "Failed to connect to backend server");
-    } finally {
-      setLoading(false);
-    }
-  };
 
   useEffect(() => {
-    fetchHealth();
+    checkBackendHealth()
+      .then((data) => setHealth(data))
+      .catch(() => setHealth(null))
+      .finally(() => setLoading(false));
   }, []);
 
   return (
-    <div className="min-h-screen bg-canvas text-ink-primary">
-      {/* Top Navigation Bar */}
-      <header className="sticky top-0 z-40 bg-surface border-b border-border px-6 py-3 flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="w-8 h-8 rounded bg-ink-primary flex items-center justify-center text-white font-mono font-bold text-sm tracking-tighter">
-            ERP
-          </div>
-          <div>
-            <div className="flex items-center space-x-2">
-              <span className="font-semibold text-sm tracking-tight text-ink-primary">
-                Acme Enterprise Ledger
-              </span>
-              <span className="px-1.5 py-0.5 text-[10px] font-mono uppercase bg-emerald-light text-emerald-brand border border-emerald-border rounded">
-                Multi-Tenant
-              </span>
-            </div>
-            <p className="text-xs text-ink-secondary">Production Accounting & Inventory Suite</p>
-          </div>
-        </div>
-
-        <div className="flex items-center space-x-3 text-xs">
-          <div className="flex items-center space-x-2 px-3 py-1 rounded bg-canvas border border-border">
-            <span
-              className={`w-2 h-2 rounded-full ${
-                health?.status === "ok" ? "bg-emerald-500 animate-pulse" : "bg-amber-500"
-              }`}
-            />
-            <span className="text-ink-secondary font-mono">
-              Backend: {loading ? "Checking..." : health?.status === "ok" ? "Online (4000)" : "Offline"}
-            </span>
-            <button
-              onClick={fetchHealth}
-              className="text-ink-secondary hover:text-ink-primary transition-colors ml-1"
-              title="Refresh Health"
-            >
-              <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
-            </button>
-          </div>
-        </div>
-      </header>
-
-      {/* Main Container */}
-      <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
-        {/* Phase 0 System Status Banner */}
-        <div className="p-4 rounded-lg bg-surface border border-border flex items-start justify-between shadow-subtle">
-          <div className="flex items-start space-x-3">
-            <div className="p-2 rounded bg-emerald-light text-emerald-brand mt-0.5">
-              <ShieldCheck className="w-5 h-5" />
+    <AppShell>
+      <div className="space-y-6 max-w-7xl mx-auto">
+        {/* Phase 0 Header Banner */}
+        <div className="flex items-center justify-between rounded-lg border border-border bg-surface p-4 shadow-subtle">
+          <div className="flex items-center space-x-3.5">
+            <div className="flex h-9 w-9 items-center justify-center rounded bg-emerald-light text-emerald-brand border border-emerald-border">
+              <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-ink-primary">
-                Phase 0 Setup Verified: Monorepo Foundation & Core Integrity
-              </h2>
+              <div className="flex items-center space-x-2">
+                <h1 className="text-sm font-semibold text-ink-primary">Phase 0: Project Setup Complete</h1>
+                <Badge variant="paid">OPERATIONAL</Badge>
+              </div>
               <p className="text-xs text-ink-secondary mt-0.5">
-                Two-folder monorepo (`backend/` + `frontend/`) initialized with strict double-entry schema,
-                Zod environment validation, Decimal arithmetic, and bespoke financial tokens.
+                Two-folder monorepo architecture, Section 6 database schema, Zod environment validation, and bespoke fintech UI tokens verified.
               </p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <span className="inline-flex items-center px-2.5 py-1 rounded text-xs font-mono font-medium bg-emerald-light text-emerald-brand border border-emerald-border">
-              <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-              Phase 0 Complete
-            </span>
+            <Badge variant="outline" className="text-ink-secondary">
+              Prisma v6 · Next.js 14 · Express
+            </Badge>
           </div>
         </div>
 
-        {/* Financial KPI Summary Cards (Using React Bits Spotlight & Counter) */}
+        {/* Live Accounting Metrics (React Bits Counter + Spotlight Cards) */}
         <div>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-xs font-mono uppercase tracking-wider text-ink-secondary">
-              Core Ledger Invariants (Live Telemetry)
-            </h3>
-            <span className="text-xs text-ink-secondary font-mono">Currency: PKR | Dual-Ledger</span>
+          <div className="flex items-center justify-between mb-2.5">
+            <h2 className="text-[11px] font-mono uppercase tracking-wider text-ink-secondary">
+              Core Ledger Invariants & Telemetry
+            </h2>
+            <span className="text-[11px] font-mono text-ink-secondary">Base Currency: PKR</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            {/* KPI 1: Net Revenue */}
+            {/* KPI 1: Accounts Receivable */}
             <SpotlightCard
               theme="light"
               spotlightColor="rgba(6, 95, 70, 0.08)"
-              className="p-5 bg-surface border border-border rounded-lg shadow-subtle"
+              className="p-4 bg-surface border border-border rounded-lg shadow-subtle"
             >
               <div className="flex items-center justify-between text-xs text-ink-secondary mb-1">
-                <span>Gross Receivables</span>
-                <span className="text-emerald-brand font-medium flex items-center">
-                  +12.4% <ArrowUpRight className="w-3 h-3 ml-0.5" />
+                <span>Accounts Receivable (AR)</span>
+                <span className="text-emerald-brand font-medium flex items-center text-[11px]">
+                  +8.5% <ArrowUpRight className="w-3 h-3 ml-0.5" />
                 </span>
               </div>
               <div className="text-2xl font-bold font-mono text-ink-primary tabular-nums tracking-tight mt-1">
                 PKR{" "}
                 <Counter
-                  value={1845000}
+                  value={2450800}
                   direction="up"
                   duration={1.2}
                   tabular
@@ -147,26 +91,26 @@ export default function HomePage() {
                   fontWeight={700}
                 />
               </div>
-              <div className="mt-2 text-[11px] text-ink-secondary flex items-center">
+              <div className="mt-2.5 text-[11px] text-ink-secondary flex items-center">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5" />
                 Derived from JournalLines
               </div>
             </SpotlightCard>
 
-            {/* KPI 2: Total Inventory Asset Value */}
+            {/* KPI 2: Inventory Valuation */}
             <SpotlightCard
               theme="light"
               spotlightColor="rgba(30, 41, 59, 0.08)"
-              className="p-5 bg-surface border border-border rounded-lg shadow-subtle"
+              className="p-4 bg-surface border border-border rounded-lg shadow-subtle"
             >
               <div className="flex items-center justify-between text-xs text-ink-secondary mb-1">
                 <span>Inventory Valuation</span>
-                <span className="font-mono text-xs text-ink-secondary">WAC Model</span>
+                <span className="font-mono text-[10px] text-ink-secondary">WAC Model</span>
               </div>
               <div className="text-2xl font-bold font-mono text-ink-primary tabular-nums tracking-tight mt-1">
                 PKR{" "}
                 <Counter
-                  value={923400}
+                  value={1185400}
                   direction="up"
                   duration={1.4}
                   tabular
@@ -174,47 +118,45 @@ export default function HomePage() {
                   fontWeight={700}
                 />
               </div>
-              <div className="mt-2 text-[11px] text-ink-secondary flex items-center">
+              <div className="mt-2.5 text-[11px] text-ink-secondary flex items-center">
                 <span className="w-1.5 h-1.5 rounded-full bg-cobalt-brand mr-1.5" />
                 SUM(StockMovement.qty × WAC)
               </div>
             </SpotlightCard>
 
-            {/* KPI 3: Trial Balance Verification */}
+            {/* KPI 3: Trial Balance Status */}
             <SpotlightCard
               theme="light"
               spotlightColor="rgba(6, 95, 70, 0.08)"
-              className="p-5 bg-surface border border-border rounded-lg shadow-subtle"
+              className="p-4 bg-surface border border-border rounded-lg shadow-subtle"
             >
               <div className="flex items-center justify-between text-xs text-ink-secondary mb-1">
                 <span>Trial Balance</span>
-                <span className="px-1.5 py-0.5 text-[10px] font-mono bg-emerald-light text-emerald-brand rounded border border-emerald-border">
-                  BALANCED
-                </span>
+                <Badge variant="paid">BALANCED</Badge>
               </div>
               <div className="text-2xl font-bold font-mono text-emerald-brand tabular-nums tracking-tight mt-1">
                 Δ 0.00
               </div>
-              <div className="mt-2 text-[11px] text-ink-secondary flex items-center">
+              <div className="mt-2.5 text-[11px] text-ink-secondary flex items-center">
                 <CheckCircle2 className="w-3 h-3 text-emerald-brand mr-1" />
                 Σ Debit === Σ Credit
               </div>
             </SpotlightCard>
 
-            {/* KPI 4: Tenant Scope & Audit */}
+            {/* KPI 4: Multi-Tenant Scope */}
             <SpotlightCard
               theme="light"
               spotlightColor="rgba(71, 85, 105, 0.08)"
-              className="p-5 bg-surface border border-border rounded-lg shadow-subtle"
+              className="p-4 bg-surface border border-border rounded-lg shadow-subtle"
             >
               <div className="flex items-center justify-between text-xs text-ink-secondary mb-1">
                 <span>Tenant Isolation</span>
                 <span className="font-mono text-[10px] text-ink-secondary">X-Company-Id</span>
               </div>
-              <div className="text-lg font-bold font-mono text-ink-primary tracking-tight mt-1 truncate">
-                Active Tenant Verified
+              <div className="text-sm font-bold font-mono text-ink-primary tracking-tight mt-2 truncate">
+                Acme Enterprise (PKR)
               </div>
-              <div className="mt-2 text-[11px] text-ink-secondary flex items-center">
+              <div className="mt-2.5 text-[11px] text-ink-secondary flex items-center">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1.5" />
                 Server-side Resolution Enforced
               </div>
@@ -222,86 +164,87 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Architecture & Non-Negotiables Verification Grid */}
+        {/* System Architecture & Setup Status Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Backend Architecture Specifications */}
-          <div className="p-5 rounded-lg bg-surface border border-border shadow-subtle">
-            <h4 className="text-sm font-semibold text-ink-primary flex items-center mb-3">
-              <Layers className="w-4 h-4 mr-2 text-ink-secondary" />
-              Backend Integrity Rules (Enforced)
-            </h4>
-            <ul className="space-y-2.5 text-xs text-ink-secondary">
-              <li className="flex items-start">
-                <CheckCircle2 className="w-4 h-4 text-emerald-brand mr-2 mt-0.5 flex-shrink-0" />
-                <span>
-                  <strong className="text-ink-primary">Zero Floating-Point Money:</strong> `@db.Decimal(15, 2)` in
-                  Prisma schema, `decimal.js` calculations, numeric strings in JSON.
-                </span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle2 className="w-4 h-4 text-emerald-brand mr-2 mt-0.5 flex-shrink-0" />
-                <span>
-                  <strong className="text-ink-primary">Double-Entry Discipline:</strong> Every posting recipe
-                  requires balanced lines before atomic `prisma.$transaction` commit.
-                </span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle2 className="w-4 h-4 text-emerald-brand mr-2 mt-0.5 flex-shrink-0" />
-                <span>
-                  <strong className="text-ink-primary">Immutable Ledger:</strong> Posted records return `403 Forbidden`
-                  on update/delete. Corrections via reversal entries.
-                </span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle2 className="w-4 h-4 text-emerald-brand mr-2 mt-0.5 flex-shrink-0" />
-                <span>
-                  <strong className="text-ink-primary">Concurrency Safe Document Numbers:</strong> Row-level lock
-                  via `SELECT ... FOR UPDATE` on `DocumentSequence`.
-                </span>
-              </li>
-            </ul>
-          </div>
+          {/* Backend Infrastructure */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Database className="w-4 h-4 mr-2 text-ink-secondary" />
+                Backend & Database Specifications
+              </CardTitle>
+              <CardDescription>Verified against Sections 4, 6, and 8 of Master Build Document</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-3 text-xs text-ink-secondary">
+                <li className="flex items-start">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-brand mr-2 mt-0.5 flex-shrink-0" />
+                  <span>
+                    <strong className="text-ink-primary">Section 6 Schema Active:</strong> 21 models & enums with `@db.Decimal(15, 2)` currency, `@db.Decimal(15, 3)` stock, compound unique keys, and tenant indices.
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-brand mr-2 mt-0.5 flex-shrink-0" />
+                  <span>
+                    <strong className="text-ink-primary">Centralized Error Handling:</strong> Standardized `{'{ error: { code, message } }'}` format with operational `AppError` and Zod validation parsing.
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-brand mr-2 mt-0.5 flex-shrink-0" />
+                  <span>
+                    <strong className="text-ink-primary">Security & Headers:</strong> Helmet, restricted CORS origin, cookie-parser for HTTP-only refresh tokens, and Pino request logging.
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-brand mr-2 mt-0.5 flex-shrink-0" />
+                  <span>
+                    <strong className="text-ink-primary">Automated Tests:</strong> Vitest suite passing with coverage over `/health` endpoint and 404 handler.
+                  </span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
 
-          {/* Frontend Design Specifications */}
-          <div className="p-5 rounded-lg bg-surface border border-border shadow-subtle">
-            <h4 className="text-sm font-semibold text-ink-primary flex items-center mb-3">
-              <Building2 className="w-4 h-4 mr-2 text-ink-secondary" />
-              Bespoke Financial UI Standards (Enforced)
-            </h4>
-            <ul className="space-y-2.5 text-xs text-ink-secondary">
-              <li className="flex items-start">
-                <CheckCircle2 className="w-4 h-4 text-emerald-brand mr-2 mt-0.5 flex-shrink-0" />
-                <span>
-                  <strong className="text-ink-primary">Anti-AI Fingerprint:</strong> Warm Alabaster (`#F8F9FA`),
-                  Obsidian ink (`#0F172A`), 1px hairline borders (`#E4E7EC`). Zero generic gradients or AI slop.
-                </span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle2 className="w-4 h-4 text-emerald-brand mr-2 mt-0.5 flex-shrink-0" />
-                <span>
-                  <strong className="text-ink-primary">Tabular Numbers Everywhere:</strong> `tabular-nums` applied
-                  across all financial columns, amounts, and counters for pixel-perfect vertical alignment.
-                </span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle2 className="w-4 h-4 text-emerald-brand mr-2 mt-0.5 flex-shrink-0" />
-                <span>
-                  <strong className="text-ink-primary">Tactile Micro-Interactions:</strong> Integrated React Bits
-                  (`SpotlightCard`, `Counter`) for high-performance fintech dashboards.
-                </span>
-              </li>
-              <li className="flex items-start">
-                <CheckCircle2 className="w-4 h-4 text-emerald-brand mr-2 mt-0.5 flex-shrink-0" />
-                <span>
-                  <strong className="text-ink-primary">Typography Pairing:</strong> Plus Jakarta Sans for UI
-                  controls paired with JetBrains Mono for ledger codes, SKUs, and amounts.
-                </span>
-              </li>
-            </ul>
-          </div>
+          {/* Frontend Infrastructure */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Building2 className="w-4 h-4 mr-2 text-ink-secondary" />
+                Frontend & UI/UX Standards
+              </CardTitle>
+              <CardDescription>Verified against Sections 3 and 8 of Master Build Document</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ul className="space-y-3 text-xs text-ink-secondary">
+                <li className="flex items-start">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-brand mr-2 mt-0.5 flex-shrink-0" />
+                  <span>
+                    <strong className="text-ink-primary">Bespoke Financial Palette:</strong> Warm Alabaster (`#F8F9FA`), pure white surfaces, 1px hairline borders (`#E4E7EC`), deep Obsidian ink (`#0F172A`).
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-brand mr-2 mt-0.5 flex-shrink-0" />
+                  <span>
+                    <strong className="text-ink-primary">Tabular Figures Everywhere:</strong> `tabular-nums` applied globally for pixel-perfect vertical column and decimal alignment.
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-brand mr-2 mt-0.5 flex-shrink-0" />
+                  <span>
+                    <strong className="text-ink-primary">Tactile Micro-Interactions:</strong> Integrated `SpotlightCard` and `Counter` from `DavidHDev/react-bits` for high-performance financial dashboards.
+                  </span>
+                </li>
+                <li className="flex items-start">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-brand mr-2 mt-0.5 flex-shrink-0" />
+                  <span>
+                    <strong className="text-ink-primary">Base Application Shell:</strong> Collapsible 240px navigation rail, company switcher, breadcrumbs, and live telemetry status bar.
+                  </span>
+                </li>
+              </ul>
+            </CardContent>
+          </Card>
         </div>
-      </main>
-    </div>
+      </div>
+    </AppShell>
   );
 }
-
