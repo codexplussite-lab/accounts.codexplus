@@ -5,6 +5,10 @@ import cookieParser from "cookie-parser";
 import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { logger } from "./lib/logger.js";
+import { authRouter } from "./modules/auth/routes.js";
+import { companyRouter } from "./modules/companies/routes.js";
+import { accountRouter } from "./modules/accounts/routes.js";
+import { journalRouter } from "./modules/journal/routes.js";
 
 export const app = express();
 
@@ -42,13 +46,20 @@ app.get("/health", (_req: Request, res: Response) => {
   });
 });
 
+// Mount Phase 1 Modules
+app.use("/api/auth", authRouter);
+app.use("/api/companies", companyRouter);
+app.use("/api/accounts", accountRouter);
+app.use("/api/journal", journalRouter);
+
 // API Base Information Endpoint
 app.get("/api", (_req: Request, res: Response) => {
   res.status(200).json({
     data: {
       name: "Enterprise Accounting & Inventory ERP API",
       version: "1.0.0",
-      status: "operational"
+      status: "operational",
+      modules: ["auth", "companies", "accounts", "journal"]
     }
   });
 });

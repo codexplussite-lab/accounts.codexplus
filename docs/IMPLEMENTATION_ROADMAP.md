@@ -220,3 +220,4 @@
 2. **Immutable Posted Records**: Any controller endpoint attempting to execute a Prisma `update` or `delete` on an invoice, bill, or journal entry with status `POSTED` will be rejected.
 3. **Double-Entry Balance Invariant**: All posting functions must assert $\sum \text{Debit} - \sum \text{Credit} === 0$ before commit.
 4. **Tenant Scoping**: All Prisma calls must include `companyId: req.companyId`. Direct trust of client-provided IDs is strictly forbidden.
+

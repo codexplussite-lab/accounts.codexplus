@@ -105,3 +105,4 @@ export async function checkBackendHealth(): Promise<{ status: string; timestamp:
   }
   return response.json();
 }
+
