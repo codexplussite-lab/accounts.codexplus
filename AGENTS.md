@@ -74,3 +74,4 @@ The frontend must look like a custom-engineered, flagship fintech product (inspi
   - Success: `{ "data": ..., "meta": { "page": 1, "limit": 20, "total": 100 } }`
   - Error: `{ "error": { "code": "ERROR_CODE", "message": "Human readable message" } }`
   - HTTP Codes: `400` Validation, `401` Unauthenticated, `403` Forbidden/Posted-Edit, `404` Not Found, `409` Conflict, `422` Business Rule Violation (e.g., Unbalanced Journal, Locked Period, Insufficient Stock).
+

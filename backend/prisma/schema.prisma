@@ -1,0 +1,336 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  OWNER
+  ACCOUNTANT
+  CASHIER
+  AUDITOR
+}
+
+enum AccountType {
+  ASSET
+  LIABILITY
+  EQUITY
+  INCOME
+  EXPENSE
+}
+
+enum EntryStatus {
+  DRAFT
+  POSTED
+  REVERSED
+}
+
+enum ContactType {
+  CUSTOMER
+  VENDOR
+  BOTH
+}
+
+enum DocStatus {
+  DRAFT
+  POSTED
+  PARTIALLY_PAID
+  PAID
+  VOID
+}
+
+enum MovementType {
+  PURCHASE
+  SALE
+  ADJUSTMENT
+  TRANSFER_IN
+  TRANSFER_OUT
+  RETURN
+  OPENING
+}
+
+enum PaymentType {
+  RECEIVED
+  MADE
+}
+
+model User {
+  id           String       @id @default(uuid())
+  email        String       @unique
+  passwordHash String
+  name         String
+  isActive     Boolean      @default(true)
+  createdAt    DateTime     @default(now())
+  memberships  Membership[]
+}
+
+model Company {
+  id                 String       @id @default(uuid())
+  name               String
+  ntn                String?
+  address            String?
+  currency           String       @default("PKR")
+  allowNegativeStock Boolean      @default(false)
+  lockedUntil        DateTime?    // is date tak entries band
+  createdAt          DateTime     @default(now())
+  memberships        Membership[]
+}
+
+model Membership {
+  userId    String
+  companyId String
+  role      Role
+  user      User     @relation(fields: [userId], references: [id])
+  company   Company  @relation(fields: [companyId], references: [id])
+
+  @@id([userId, companyId])
+}
+
+model FiscalYear {
+  id        String   @id @default(uuid())
+  companyId String
+  name      String
+  startDate DateTime
+  endDate   DateTime
+  isClosed  Boolean  @default(false)
+
+  @@index([companyId])
+}
+
+model Account {
+  id         String       @id @default(uuid())
+  companyId  String
+  code       String
+  name       String
+  type       AccountType
+  parentId   String?
+  isSystem   Boolean      @default(false) // delete nahi ho sakta
+  systemKey  String?      // CASH, AR, AP, INVENTORY, SALES, COGS, SALES_TAX_PAYABLE, TAX_RECEIVABLE
+  isActive   Boolean      @default(true)
+  lines      JournalLine[]
+
+  @@unique([companyId, code])
+  @@unique([companyId, systemKey])
+}
+
+model JournalEntry {
+  id           String       @id @default(uuid())
+  companyId    String
+  number       String
+  date         DateTime
+  narration    String?
+  status       EntryStatus  @default(DRAFT)
+  sourceType   String?      // INVOICE, BILL, PAYMENT, MANUAL, REVERSAL
+  sourceId     String?
+  reversedById String?
+  createdById  String?
+  createdAt    DateTime     @default(now())
+  lines        JournalLine[]
+
+  @@unique([companyId, number])
+  @@index([companyId, date])
+}
+
+model JournalLine {
+  id        String       @id @default(uuid())
+  entryId   String
+  accountId String
+  contactId String?
+  debit     Decimal      @default(0) @db.Decimal(15, 2)
+  credit    Decimal      @default(0) @db.Decimal(15, 2)
+  memo      String?
+  entry     JournalEntry @relation(fields: [entryId], references: [id])
+  account   Account      @relation(fields: [accountId], references: [id])
+
+  @@index([accountId])
+}
+
+model Contact {
+  id             String      @id @default(uuid())
+  companyId      String
+  type           ContactType
+  name           String
+  phone          String?
+  email          String?
+  ntn            String?
+  address        String?
+  openingBalance Decimal     @default(0) @db.Decimal(15, 2)
+  creditLimit    Decimal?    @db.Decimal(15, 2)
+  isActive       Boolean     @default(true)
+
+  @@index([companyId, type])
+}
+
+model TaxRate {
+  id         String   @id @default(uuid())
+  companyId  String
+  name       String
+  percentage Decimal  @db.Decimal(5, 2)
+  isActive   Boolean  @default(true)
+}
+
+model Category {
+  id        String @id @default(uuid())
+  companyId String
+  name      String
+}
+
+model Warehouse {
+  id        String  @id @default(uuid())
+  companyId String
+  name      String
+  isDefault Boolean @default(false)
+}
+
+model Product {
+  id           String          @id @default(uuid())
+  companyId    String
+  sku          String
+  name         String
+  categoryId   String?
+  unit         String          @default("pcs")
+  costPrice    Decimal         @default(0) @db.Decimal(15, 2) // weighted average, auto update
+  salePrice    Decimal         @default(0) @db.Decimal(15, 2)
+  reorderLevel Decimal         @default(0) @db.Decimal(15, 3)
+  trackStock   Boolean         @default(true) // service items = false
+  barcode      String?
+  isActive     Boolean         @default(true)
+  movements    StockMovement[]
+
+  @@unique([companyId, sku])
+}
+
+model StockMovement {
+  id          String       @id @default(uuid())
+  companyId   String
+  productId   String
+  warehouseId String
+  quantity    Decimal      @db.Decimal(15, 3) // + ya -
+  unitCost    Decimal      @db.Decimal(15, 2)
+  type        MovementType
+  date        DateTime
+  sourceType  String?
+  sourceId    String?
+  note        String?
+  createdAt   DateTime     @default(now())
+  product     Product      @relation(fields: [productId], references: [id])
+
+  @@index([companyId, productId])
+}
+
+model Invoice {
+  id         String        @id @default(uuid())
+  companyId  String
+  number     String
+  contactId  String
+  date       DateTime
+  dueDate    DateTime?
+  status     DocStatus     @default(DRAFT)
+  subtotal   Decimal       @default(0) @db.Decimal(15, 2)
+  taxTotal   Decimal       @default(0) @db.Decimal(15, 2)
+  total      Decimal       @default(0) @db.Decimal(15, 2)
+  paidAmount Decimal       @default(0) @db.Decimal(15, 2)
+  notes      String?
+  items      InvoiceItem[]
+
+  @@unique([companyId, number])
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  productId   String?
+  description String?
+  quantity    Decimal  @db.Decimal(15, 3)
+  unitPrice   Decimal  @db.Decimal(15, 2)
+  discount    Decimal  @default(0) @db.Decimal(15, 2)
+  taxRateId   String?
+  taxAmount   Decimal  @default(0) @db.Decimal(15, 2)
+  lineTotal   Decimal  @db.Decimal(15, 2)
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+}
+
+model Bill {
+  id           String     @id @default(uuid())
+  companyId    String
+  number       String
+  vendorBillNo String?
+  contactId    String
+  date         DateTime
+  dueDate      DateTime?
+  status       DocStatus  @default(DRAFT)
+  subtotal     Decimal    @default(0) @db.Decimal(15, 2)
+  taxTotal     Decimal    @default(0) @db.Decimal(15, 2)
+  total        Decimal    @default(0) @db.Decimal(15, 2)
+  paidAmount   Decimal    @default(0) @db.Decimal(15, 2)
+  items        BillItem[]
+
+  @@unique([companyId, number])
+}
+
+model BillItem {
+  id         String   @id @default(uuid())
+  billId     String
+  productId  String?
+  accountId  String?  // non-stock expense ke liye
+  quantity   Decimal  @db.Decimal(15, 3)
+  unitCost   Decimal  @db.Decimal(15, 2)
+  taxRateId  String?
+  taxAmount  Decimal  @default(0) @db.Decimal(15, 2)
+  lineTotal  Decimal  @db.Decimal(15, 2)
+  bill       Bill     @relation(fields: [billId], references: [id])
+}
+
+model Payment {
+  id            String      @id @default(uuid())
+  companyId     String
+  number        String
+  type          PaymentType
+  contactId     String
+  invoiceId     String?
+  billId        String?
+  bankAccountId String
+  amount        Decimal     @db.Decimal(15, 2)
+  date          DateTime
+  method        String?
+  reference     String?
+
+  @@unique([companyId, number])
+}
+
+model BankAccount {
+  id        String  @id @default(uuid())
+  companyId String
+  name      String
+  accountId String  // Chart of Accounts ka linked account
+  accountNo String?
+}
+
+model DocumentSequence {
+  companyId String
+  type      String  // INV, BILL, PAY, JV
+  year      Int
+  last      Int     @default(0)
+
+  @@id([companyId, type, year])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  companyId String
+  userId    String?
+  model     String
+  objectId  String
+  action    String   // CREATE UPDATE DELETE POST VOID LOGIN
+  oldData   Json?
+  newData   Json?
+  ipAddress String?
+  timestamp DateTime @default(now())
+
+  @@index([companyId, timestamp])
+}
+
