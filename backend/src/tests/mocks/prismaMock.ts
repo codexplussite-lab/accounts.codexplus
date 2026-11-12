@@ -12,6 +12,7 @@ export function createInMemoryPrisma() {
   const journalLines: any[] = [];
   const auditLogs: any[] = [];
 
+  const categories: any[] = [];
   const contacts: any[] = [];
   const taxRates: any[] = [];
   const products: any[] = [];
@@ -174,8 +175,78 @@ export function createInMemoryPrisma() {
         warehouses.push(w);
         return w;
       }),
-      findFirst: vi.fn(async ({ where }: any) => warehouses.find((w) => w.companyId === where?.companyId && (!where.isDefault || w.isDefault))),
-      findMany: vi.fn(async ({ where }: any) => warehouses.filter((w) => w.companyId === where?.companyId))
+      findFirst: vi.fn(async ({ where }: any) => {
+        return (
+          warehouses.find(
+            (w) =>
+              (!where.id || w.id === where.id) &&
+              (!where.companyId || w.companyId === where.companyId) &&
+              (where.isDefault === undefined || w.isDefault === where.isDefault)
+          ) || null
+        );
+      }),
+      findMany: vi.fn(async ({ where, orderBy }: any) => {
+        return warehouses.filter((w) => !where?.companyId || w.companyId === where.companyId);
+      }),
+      update: vi.fn(async ({ where, data }: any) => {
+        const idx = warehouses.findIndex((w) => w.id === where.id);
+        if (idx >= 0) {
+          warehouses[idx] = { ...warehouses[idx], ...data };
+          return warehouses[idx];
+        }
+        return null;
+      }),
+      updateMany: vi.fn(async ({ where, data }: any) => {
+        let count = 0;
+        for (const w of warehouses) {
+          if (!where.companyId || w.companyId === where.companyId) {
+            if (!where.id || (where.id.not && w.id !== where.id.not)) {
+              Object.assign(w, data);
+              count++;
+            }
+          }
+        }
+        return { count };
+      }),
+      delete: vi.fn(async ({ where }: any) => {
+        const idx = warehouses.findIndex((w) => w.id === where.id);
+        if (idx >= 0) {
+          return warehouses.splice(idx, 1)[0];
+        }
+        return null;
+      })
+    },
+    category: {
+      create: vi.fn(async ({ data }: any) => {
+        const cat = { id: `cat-${Date.now()}-${Math.random()}`, ...data };
+        categories.push(cat);
+        return cat;
+      }),
+      findFirst: vi.fn(async ({ where }: any) => {
+        return (
+          categories.find(
+            (c) => (!where.id || c.id === where.id) && (!where.companyId || c.companyId === where.companyId)
+          ) || null
+        );
+      }),
+      findMany: vi.fn(async ({ where }: any) => {
+        return categories.filter((c) => !where?.companyId || c.companyId === where.companyId);
+      }),
+      update: vi.fn(async ({ where, data }: any) => {
+        const idx = categories.findIndex((c) => c.id === where.id);
+        if (idx >= 0) {
+          categories[idx] = { ...categories[idx], ...data };
+          return categories[idx];
+        }
+        return null;
+      }),
+      delete: vi.fn(async ({ where }: any) => {
+        const idx = categories.findIndex((c) => c.id === where.id);
+        if (idx >= 0) {
+          return categories.splice(idx, 1)[0];
+        }
+        return null;
+      })
     },
     documentSequence: {
       create: vi.fn(async ({ data }: any) => {
@@ -288,6 +359,7 @@ export function createInMemoryPrisma() {
         return journalLines
           .filter((l) => {
             if (where?.contactId && l.contactId !== where.contactId) return false;
+            if (where?.accountId && typeof where.accountId === "string" && l.accountId !== where.accountId) return false;
             if (where?.accountId?.in && !where.accountId.in.includes(l.accountId)) return false;
             if (where?.entry?.companyId) {
               const ent = journalEntries.find((e) => e.id === l.entryId);
@@ -383,16 +455,41 @@ export function createInMemoryPrisma() {
         return p;
       }),
       findFirst: vi.fn(async ({ where }: any) => {
-        return products.find((p) => (!where.id || p.id === where.id) && (!where.companyId || p.companyId === where.companyId)) || null;
+        return (
+          products.find(
+            (p) =>
+              (!where.id || p.id === where.id) &&
+              (!where.companyId || p.companyId === where.companyId) &&
+              (!where.sku || p.sku === where.sku)
+          ) || null
+        );
       }),
-      findMany: vi.fn(async ({ where }: any) => {
-        return products.filter((p) => !where?.companyId || p.companyId === where.companyId);
+      findMany: vi.fn(async ({ where, skip = 0, take = 20 }: any) => {
+        return products
+          .filter((p) => {
+            if (where?.companyId && p.companyId !== where.companyId) return false;
+            if (where?.categoryId && p.categoryId !== where.categoryId) return false;
+            if (where?.isActive !== undefined && p.isActive !== where.isActive) return false;
+            if (where?.id?.in && !where.id.in.includes(p.id)) return false;
+            return true;
+          })
+          .slice(skip, skip + take);
+      }),
+      count: vi.fn(async ({ where }: any) => {
+        return products.filter((p) => !where?.companyId || p.companyId === where.companyId).length;
       }),
       update: vi.fn(async ({ where, data }: any) => {
         const idx = products.findIndex((p) => p.id === where.id);
         if (idx >= 0) {
           products[idx] = { ...products[idx], ...data };
           return products[idx];
+        }
+        return null;
+      }),
+      delete: vi.fn(async ({ where }: any) => {
+        const idx = products.findIndex((p) => p.id === where.id);
+        if (idx >= 0) {
+          return products.splice(idx, 1)[0];
         }
         return null;
       })
@@ -403,14 +500,23 @@ export function createInMemoryPrisma() {
         stockMovements.push(m);
         return m;
       }),
-      findMany: vi.fn(async ({ where }: any) => {
+      findMany: vi.fn(async ({ where, orderBy }: any) => {
         return stockMovements.filter((m) => {
           if (where?.companyId && m.companyId !== where.companyId) return false;
           if (where?.productId && m.productId !== where.productId) return false;
+          if (where?.warehouseId && m.warehouseId !== where.warehouseId) return false;
           if (where?.sourceType && m.sourceType !== where.sourceType) return false;
           if (where?.sourceId && m.sourceId !== where.sourceId) return false;
           return true;
         });
+      }),
+      count: vi.fn(async ({ where }: any) => {
+        return stockMovements.filter((m) => {
+          if (where?.companyId && m.companyId !== where.companyId) return false;
+          if (where?.productId && m.productId !== where.productId) return false;
+          if (where?.warehouseId && m.warehouseId !== where.warehouseId) return false;
+          return true;
+        }).length;
       })
     },
     invoice: {
@@ -677,6 +783,7 @@ export function createInMemoryPrisma() {
       journalEntries,
       journalLines,
       auditLogs,
+      categories,
       contacts,
       taxRates,
       products,

@@ -65,6 +65,17 @@ export async function apiClient<T = any>(
     Accept: "application/json"
   };
 
+  if (typeof window !== "undefined") {
+    const token = localStorage.getItem("accessToken");
+    if (token) {
+      defaultHeaders["Authorization"] = `Bearer ${token}`;
+    }
+    const storedCompany = localStorage.getItem("activeCompanyId");
+    if (storedCompany && !companyId) {
+      defaultHeaders["X-Company-Id"] = storedCompany;
+    }
+  }
+
   if (companyId) {
     defaultHeaders["X-Company-Id"] = companyId;
   }

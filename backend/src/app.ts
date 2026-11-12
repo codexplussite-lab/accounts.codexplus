@@ -14,6 +14,7 @@ import taxRouter from "./modules/taxes/routes.js";
 import salesRouter from "./modules/sales/routes.js";
 import purchaseRouter from "./modules/purchases/routes.js";
 import paymentRouter from "./modules/payments/routes.js";
+import inventoryRouter from "./modules/inventory/routes.js";
 
 export const app = express();
 
@@ -64,6 +65,9 @@ app.use("/api/sales", salesRouter);
 app.use("/api/purchases", purchaseRouter);
 app.use("/api/payments", paymentRouter);
 
+// Mount Phase 3 Modules
+app.use("/api/inventory", inventoryRouter);
+
 // API Base Information Endpoint
 app.get("/api", (_req: Request, res: Response) => {
   res.status(200).json({
@@ -71,7 +75,7 @@ app.get("/api", (_req: Request, res: Response) => {
       name: "Enterprise Accounting & Inventory ERP API",
       version: "1.0.0",
       status: "operational",
-      modules: ["auth", "companies", "accounts", "journal", "contacts", "taxes", "sales", "purchases", "payments"]
+      modules: ["auth", "companies", "accounts", "journal", "contacts", "taxes", "sales", "purchases", "payments", "inventory"]
     }
   });
 });
