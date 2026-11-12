@@ -310,6 +310,36 @@ model BankAccount {
   accountNo String?
 }
 
+model CreditNote {
+  id         String           @id @default(uuid())
+  companyId  String
+  number     String
+  invoiceId  String?
+  contactId  String
+  date       DateTime
+  status     DocStatus        @default(DRAFT)
+  subtotal   Decimal          @default(0) @db.Decimal(15, 2)
+  taxTotal   Decimal          @default(0) @db.Decimal(15, 2)
+  total      Decimal          @default(0) @db.Decimal(15, 2)
+  notes      String?
+  items      CreditNoteItem[]
+
+  @@unique([companyId, number])
+}
+
+model CreditNoteItem {
+  id           String     @id @default(uuid())
+  creditNoteId String
+  productId    String?
+  description  String?
+  quantity     Decimal    @db.Decimal(15, 3)
+  unitPrice    Decimal    @db.Decimal(15, 2)
+  taxRateId    String?
+  taxAmount    Decimal    @default(0) @db.Decimal(15, 2)
+  lineTotal    Decimal    @db.Decimal(15, 2)
+  creditNote   CreditNote @relation(fields: [creditNoteId], references: [id])
+}
+
 model DocumentSequence {
   companyId String
   type      String  // INV, BILL, PAY, JV

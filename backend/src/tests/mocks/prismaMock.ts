@@ -12,6 +12,18 @@ export function createInMemoryPrisma() {
   const journalLines: any[] = [];
   const auditLogs: any[] = [];
 
+  const contacts: any[] = [];
+  const taxRates: any[] = [];
+  const products: any[] = [];
+  const stockMovements: any[] = [];
+  const invoices: any[] = [];
+  const invoiceItems: any[] = [];
+  const bills: any[] = [];
+  const billItems: any[] = [];
+  const payments: any[] = [];
+  const creditNotes: any[] = [];
+  const creditNoteItems: any[] = [];
+
   const db = {
     user: {
       create: vi.fn(async ({ data }: any) => {
@@ -19,7 +31,7 @@ export function createInMemoryPrisma() {
         users.push(u);
         return u;
       }),
-      findUnique: vi.fn(async ({ where, include, select }: any) => {
+      findUnique: vi.fn(async ({ where, select }: any) => {
         const u = users.find((x) => (where.id && x.id === where.id) || (where.email && x.email === where.email));
         if (!u) return null;
 
@@ -111,9 +123,15 @@ export function createInMemoryPrisma() {
       }),
       findFirst: vi.fn(async ({ where }: any) => {
         return (
-          accounts.find(
-            (x) => (!where.id || x.id === where.id) && (!where.companyId || x.companyId === where.companyId)
-          ) || null
+          accounts.find((x) => {
+            if (where.id && x.id !== where.id) return false;
+            if (where.companyId && x.companyId !== where.companyId) return false;
+            if (where.systemKey) {
+              if (where.systemKey.in && !where.systemKey.in.includes(x.systemKey)) return false;
+              if (typeof where.systemKey === "string" && x.systemKey !== where.systemKey) return false;
+            }
+            return true;
+          }) || null
         );
       }),
       findMany: vi.fn(async ({ where }: any) => {
@@ -122,6 +140,7 @@ export function createInMemoryPrisma() {
           if (where?.id?.in && !where.id.in.includes(x.id)) return false;
           if (where?.type && x.type !== where.type) return false;
           if (where?.isActive !== undefined && x.isActive !== where.isActive) return false;
+          if (where?.systemKey?.in && !where.systemKey.in.includes(x.systemKey)) return false;
           return true;
         });
       }),
@@ -155,6 +174,7 @@ export function createInMemoryPrisma() {
         warehouses.push(w);
         return w;
       }),
+      findFirst: vi.fn(async ({ where }: any) => warehouses.find((w) => w.companyId === where?.companyId && (!where.isDefault || w.isDefault))),
       findMany: vi.fn(async ({ where }: any) => warehouses.filter((w) => w.companyId === where?.companyId))
     },
     documentSequence: {
@@ -178,64 +198,64 @@ export function createInMemoryPrisma() {
       })
     },
     fiscalYear: {
-      create: vi.fn(async ({ data }: any) => {
-        const fy = { id: `fy-${Date.now()}`, ...data };
-        fiscalYears.push(fy);
-        return fy;
-      }),
       findFirst: vi.fn(async ({ where }: any) => {
-        return (
-          fiscalYears.find((fy) => {
-            if (where.companyId && fy.companyId !== where.companyId) return false;
-            if (where.isClosed !== undefined && fy.isClosed !== where.isClosed) return false;
-            if (where.startDate?.lte && fy.startDate > where.startDate.lte) return false;
-            if (where.endDate?.gte && fy.endDate < where.endDate.gte) return false;
-            return true;
-          }) || null
-        );
+        return fiscalYears.find((fy) => fy.companyId === where.companyId && fy.isClosed === where.isClosed) || null;
       })
     },
     journalEntry: {
       create: vi.fn(async ({ data }: any) => {
-        const id = `je-${Date.now()}-${Math.random()}`;
+        const id = `entry-${Date.now()}-${Math.random()}`;
         const entry = {
           id,
-          createdAt: new Date(),
-          ...data,
-          lines: []
+          number: data.number,
+          date: data.date,
+          narration: data.narration,
+          sourceType: data.sourceType,
+          sourceId: data.sourceId,
+          createdById: data.createdById,
+          companyId: data.companyId,
+          status: data.status || "DRAFT",
+          createdAt: new Date()
         };
-        if (data.lines?.create) {
-          entry.lines = data.lines.create.map((l: any) => ({
-            id: `line-${Date.now()}-${Math.random()}`,
-            entryId: id,
-            ...l,
-            account: accounts.find((a) => a.id === l.accountId) || { id: l.accountId, code: "ACC", name: "Mock Account" }
-          }));
-          journalLines.push(...entry.lines);
-        }
         journalEntries.push(entry);
-        return entry;
+
+        if (data.lines?.create) {
+          for (const line of data.lines.create) {
+            journalLines.push({
+              id: `line-${Date.now()}-${Math.random()}`,
+              entryId: id,
+              ...line
+            });
+          }
+        }
+
+        return {
+          ...entry,
+          lines: journalLines.filter((l) => l.entryId === id)
+        };
       }),
       findFirst: vi.fn(async ({ where }: any) => {
-        const entry = journalEntries.find((e) => {
-          if (where.id && e.id !== where.id) return false;
-          if (where.companyId && e.companyId !== where.companyId) return false;
+        const found = journalEntries.find((e) => {
+          if (where?.id && e.id !== where.id) return false;
+          if (where?.companyId && e.companyId !== where.companyId) return false;
+          if (where?.sourceType && e.sourceType !== where.sourceType) return false;
+          if (where?.sourceId && e.sourceId !== where.sourceId) return false;
+          if (where?.status && e.status !== where.status) return false;
           return true;
         });
-        if (!entry) return null;
-        const lines = journalLines.filter((l) => l.entryId === entry.id).map((l) => ({
-          ...l,
-          account: accounts.find((a) => a.id === l.accountId) || { id: l.accountId, code: "ACC", name: "Mock Account" }
-        }));
-        return { ...entry, lines };
+        if (!found) return null;
+        return {
+          ...found,
+          lines: journalLines.filter((l) => l.entryId === found.id)
+        };
       }),
-      findMany: vi.fn(async ({ where, skip = 0, take = 20 }: any) => {
+      findMany: vi.fn(async ({ where }: any) => {
         const filtered = journalEntries.filter((e) => {
           if (where?.companyId && e.companyId !== where.companyId) return false;
           if (where?.status && e.status !== where.status) return false;
           return true;
         });
-        return filtered.slice(skip, skip + take).map((entry) => ({
+        return filtered.map((entry) => ({
           ...entry,
           lines: journalLines.filter((l) => l.entryId === entry.id)
         }));
@@ -264,6 +284,29 @@ export function createInMemoryPrisma() {
       })
     },
     journalLine: {
+      findMany: vi.fn(async ({ where, include, orderBy }: any) => {
+        return journalLines
+          .filter((l) => {
+            if (where?.contactId && l.contactId !== where.contactId) return false;
+            if (where?.accountId?.in && !where.accountId.in.includes(l.accountId)) return false;
+            if (where?.entry?.companyId) {
+              const ent = journalEntries.find((e) => e.id === l.entryId);
+              if (!ent || ent.companyId !== where.entry.companyId) return false;
+              if (where.entry.status && ent.status !== where.entry.status) return false;
+            }
+            return true;
+          })
+          .map((l) => {
+            const res: any = { ...l };
+            if (include?.account) {
+              res.account = accounts.find((a) => a.id === l.accountId);
+            }
+            if (include?.entry) {
+              res.entry = journalEntries.find((e) => e.id === l.entryId);
+            }
+            return res;
+          });
+      }),
       deleteMany: vi.fn(async ({ where }: any) => {
         let count = 0;
         for (let i = journalLines.length - 1; i >= 0; i--) {
@@ -279,6 +322,331 @@ export function createInMemoryPrisma() {
           if (where.accountId && l.accountId !== where.accountId) return false;
           return true;
         }).length;
+      })
+    },
+    contact: {
+      create: vi.fn(async ({ data }: any) => {
+        const c = { id: `contact-${Date.now()}-${Math.random()}`, ...data };
+        contacts.push(c);
+        return c;
+      }),
+      findFirst: vi.fn(async ({ where }: any) => {
+        return contacts.find((c) => (!where.id || c.id === where.id) && (!where.companyId || c.companyId === where.companyId)) || null;
+      }),
+      findMany: vi.fn(async ({ where, skip = 0, take = 20 }: any) => {
+        return contacts
+          .filter((c) => {
+            if (where?.companyId && c.companyId !== where.companyId) return false;
+            if (where?.type && c.type !== where.type) return false;
+            if (where?.id?.in && !where.id.in.includes(c.id)) return false;
+            return true;
+          })
+          .slice(skip, skip + take);
+      }),
+      count: vi.fn(async ({ where }: any) => {
+        return contacts.filter((c) => !where?.companyId || c.companyId === where.companyId).length;
+      }),
+      update: vi.fn(async ({ where, data }: any) => {
+        const idx = contacts.findIndex((c) => c.id === where.id);
+        if (idx >= 0) {
+          contacts[idx] = { ...contacts[idx], ...data };
+          return contacts[idx];
+        }
+        return null;
+      })
+    },
+    taxRate: {
+      create: vi.fn(async ({ data }: any) => {
+        const t = { id: `tax-${Date.now()}-${Math.random()}`, ...data };
+        taxRates.push(t);
+        return t;
+      }),
+      findFirst: vi.fn(async ({ where }: any) => {
+        return taxRates.find((t) => (!where.id || t.id === where.id) && (!where.companyId || t.companyId === where.companyId)) || null;
+      }),
+      findMany: vi.fn(async ({ where }: any) => {
+        return taxRates.filter((t) => !where?.companyId || t.companyId === where.companyId);
+      }),
+      update: vi.fn(async ({ where, data }: any) => {
+        const idx = taxRates.findIndex((t) => t.id === where.id);
+        if (idx >= 0) {
+          taxRates[idx] = { ...taxRates[idx], ...data };
+          return taxRates[idx];
+        }
+        return null;
+      })
+    },
+    product: {
+      create: vi.fn(async ({ data }: any) => {
+        const p = { id: `prod-${Date.now()}-${Math.random()}`, ...data };
+        products.push(p);
+        return p;
+      }),
+      findFirst: vi.fn(async ({ where }: any) => {
+        return products.find((p) => (!where.id || p.id === where.id) && (!where.companyId || p.companyId === where.companyId)) || null;
+      }),
+      findMany: vi.fn(async ({ where }: any) => {
+        return products.filter((p) => !where?.companyId || p.companyId === where.companyId);
+      }),
+      update: vi.fn(async ({ where, data }: any) => {
+        const idx = products.findIndex((p) => p.id === where.id);
+        if (idx >= 0) {
+          products[idx] = { ...products[idx], ...data };
+          return products[idx];
+        }
+        return null;
+      })
+    },
+    stockMovement: {
+      create: vi.fn(async ({ data }: any) => {
+        const m = { id: `mv-${Date.now()}-${Math.random()}`, createdAt: new Date(), ...data };
+        stockMovements.push(m);
+        return m;
+      }),
+      findMany: vi.fn(async ({ where }: any) => {
+        return stockMovements.filter((m) => {
+          if (where?.companyId && m.companyId !== where.companyId) return false;
+          if (where?.productId && m.productId !== where.productId) return false;
+          if (where?.sourceType && m.sourceType !== where.sourceType) return false;
+          if (where?.sourceId && m.sourceId !== where.sourceId) return false;
+          return true;
+        });
+      })
+    },
+    invoice: {
+      create: vi.fn(async ({ data }: any) => {
+        const id = `inv-${Date.now()}-${Math.random()}`;
+        const inv = {
+          id,
+          companyId: data.companyId,
+          number: data.number,
+          contactId: data.contactId,
+          date: data.date,
+          dueDate: data.dueDate,
+          status: data.status || "DRAFT",
+          subtotal: data.subtotal,
+          taxTotal: data.taxTotal,
+          total: data.total,
+          paidAmount: data.paidAmount || "0.00",
+          notes: data.notes
+        };
+        invoices.push(inv);
+
+        if (data.items?.create) {
+          for (const item of data.items.create) {
+            invoiceItems.push({
+              id: `inv-item-${Date.now()}-${Math.random()}`,
+              invoiceId: id,
+              ...item
+            });
+          }
+        }
+
+        return {
+          ...inv,
+          items: invoiceItems.filter((it) => it.invoiceId === id)
+        };
+      }),
+      findFirst: vi.fn(async ({ where, include }: any) => {
+        const inv = invoices.find((i) => (!where.id || i.id === where.id) && (!where.companyId || i.companyId === where.companyId));
+        if (!inv) return null;
+        return {
+          ...inv,
+          items: include?.items ? invoiceItems.filter((it) => it.invoiceId === inv.id) : []
+        };
+      }),
+      findMany: vi.fn(async ({ where, skip = 0, take = 20, include }: any) => {
+        return invoices
+          .filter((i) => {
+            if (where?.companyId && i.companyId !== where.companyId) return false;
+            if (where?.contactId && i.contactId !== where.contactId) return false;
+            if (where?.status && i.status !== where.status) return false;
+            return true;
+          })
+          .slice(skip, skip + take)
+          .map((i) => ({
+            ...i,
+            items: include?.items ? invoiceItems.filter((it) => it.invoiceId === i.id) : []
+          }));
+      }),
+      count: vi.fn(async ({ where }: any) => {
+        return invoices.filter((i) => !where?.companyId || i.companyId === where.companyId).length;
+      }),
+      update: vi.fn(async ({ where, data }: any) => {
+        const idx = invoices.findIndex((i) => i.id === where.id);
+        if (idx >= 0) {
+          invoices[idx] = { ...invoices[idx], ...data };
+          return invoices[idx];
+        }
+        return null;
+      }),
+      delete: vi.fn(async ({ where }: any) => {
+        const idx = invoices.findIndex((i) => i.id === where.id);
+        if (idx >= 0) {
+          return invoices.splice(idx, 1)[0];
+        }
+        return null;
+      })
+    },
+    invoiceItem: {
+      deleteMany: vi.fn(async ({ where }: any) => {
+        let count = 0;
+        for (let i = invoiceItems.length - 1; i >= 0; i--) {
+          if (invoiceItems[i].invoiceId === where.invoiceId) {
+            invoiceItems.splice(i, 1);
+            count++;
+          }
+        }
+        return { count };
+      })
+    },
+    bill: {
+      create: vi.fn(async ({ data }: any) => {
+        const id = `bill-${Date.now()}-${Math.random()}`;
+        const b = {
+          id,
+          companyId: data.companyId,
+          number: data.number,
+          vendorBillNo: data.vendorBillNo,
+          contactId: data.contactId,
+          date: data.date,
+          dueDate: data.dueDate,
+          status: data.status || "DRAFT",
+          subtotal: data.subtotal,
+          taxTotal: data.taxTotal,
+          total: data.total,
+          paidAmount: data.paidAmount || "0.00"
+        };
+        bills.push(b);
+
+        if (data.items?.create) {
+          for (const item of data.items.create) {
+            billItems.push({
+              id: `bill-item-${Date.now()}-${Math.random()}`,
+              billId: id,
+              ...item
+            });
+          }
+        }
+
+        return {
+          ...b,
+          items: billItems.filter((it) => it.billId === id)
+        };
+      }),
+      findFirst: vi.fn(async ({ where, include }: any) => {
+        const b = bills.find((x) => (!where.id || x.id === where.id) && (!where.companyId || x.companyId === where.companyId));
+        if (!b) return null;
+        return {
+          ...b,
+          items: include?.items ? billItems.filter((it) => it.billId === b.id) : []
+        };
+      }),
+      findMany: vi.fn(async ({ where, skip = 0, take = 20, include }: any) => {
+        return bills
+          .filter((x) => {
+            if (where?.companyId && x.companyId !== where.companyId) return false;
+            if (where?.contactId && x.contactId !== where.contactId) return false;
+            if (where?.status && x.status !== where.status) return false;
+            return true;
+          })
+          .slice(skip, skip + take)
+          .map((b) => ({
+            ...b,
+            items: include?.items ? billItems.filter((it) => it.billId === b.id) : []
+          }));
+      }),
+      count: vi.fn(async ({ where }: any) => {
+        return bills.filter((b) => !where?.companyId || b.companyId === where.companyId).length;
+      }),
+      update: vi.fn(async ({ where, data }: any) => {
+        const idx = bills.findIndex((b) => b.id === where.id);
+        if (idx >= 0) {
+          bills[idx] = { ...bills[idx], ...data };
+          return bills[idx];
+        }
+        return null;
+      }),
+      delete: vi.fn(async ({ where }: any) => {
+        const idx = bills.findIndex((b) => b.id === where.id);
+        if (idx >= 0) {
+          return bills.splice(idx, 1)[0];
+        }
+        return null;
+      })
+    },
+    billItem: {
+      deleteMany: vi.fn(async ({ where }: any) => {
+        let count = 0;
+        for (let i = billItems.length - 1; i >= 0; i--) {
+          if (billItems[i].billId === where.billId) {
+            billItems.splice(i, 1);
+            count++;
+          }
+        }
+        return { count };
+      })
+    },
+    payment: {
+      create: vi.fn(async ({ data }: any) => {
+        const p = { id: `pay-${Date.now()}-${Math.random()}`, ...data };
+        payments.push(p);
+        return p;
+      }),
+      findFirst: vi.fn(async ({ where }: any) => {
+        return payments.find((p) => (!where.id || p.id === where.id) && (!where.companyId || p.companyId === where.companyId)) || null;
+      }),
+      findMany: vi.fn(async ({ where, skip = 0, take = 20 }: any) => {
+        return payments
+          .filter((p) => {
+            if (where?.companyId && p.companyId !== where.companyId) return false;
+            if (where?.type && p.type !== where.type) return false;
+            if (where?.contactId && p.contactId !== where.contactId) return false;
+            if (where?.invoiceId && p.invoiceId !== where.invoiceId) return false;
+            if (where?.billId && p.billId !== where.billId) return false;
+            return true;
+          })
+          .slice(skip, skip + take);
+      }),
+      count: vi.fn(async ({ where }: any) => {
+        return payments.filter((p) => !where?.companyId || p.companyId === where.companyId).length;
+      })
+    },
+    creditNote: {
+      create: vi.fn(async ({ data }: any) => {
+        const id = `cn-${Date.now()}-${Math.random()}`;
+        const cn = {
+          id,
+          companyId: data.companyId,
+          number: data.number,
+          invoiceId: data.invoiceId,
+          contactId: data.contactId,
+          date: data.date,
+          status: data.status,
+          subtotal: data.subtotal,
+          taxTotal: data.taxTotal,
+          total: data.total,
+          notes: data.notes
+        };
+        creditNotes.push(cn);
+
+        if (data.items?.create) {
+          for (const item of data.items.create) {
+            creditNoteItems.push({
+              id: `cn-item-${Date.now()}-${Math.random()}`,
+              creditNoteId: id,
+              ...item
+            });
+          }
+        }
+
+        return {
+          ...cn,
+          items: creditNoteItems.filter((it) => it.creditNoteId === id)
+        };
+      }),
+      findFirst: vi.fn(async ({ where }: any) => {
+        return creditNotes.find((cn) => (!where.id || cn.id === where.id) && (!where.companyId || cn.companyId === where.companyId)) || null;
       })
     },
     auditLog: {
@@ -308,7 +676,18 @@ export function createInMemoryPrisma() {
       fiscalYears,
       journalEntries,
       journalLines,
-      auditLogs
+      auditLogs,
+      contacts,
+      taxRates,
+      products,
+      stockMovements,
+      invoices,
+      invoiceItems,
+      bills,
+      billItems,
+      payments,
+      creditNotes,
+      creditNoteItems
     }
   };
 }
