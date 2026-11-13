@@ -15,6 +15,7 @@ import salesRouter from "./modules/sales/routes.js";
 import purchaseRouter from "./modules/purchases/routes.js";
 import paymentRouter from "./modules/payments/routes.js";
 import inventoryRouter from "./modules/inventory/routes.js";
+import reportsRouter from "./modules/reports/routes.js";
 
 export const app = express();
 
@@ -67,6 +68,9 @@ app.use("/api/payments", paymentRouter);
 
 // Mount Phase 3 Modules
 app.use("/api/inventory", inventoryRouter);
+
+// Mount Phase 4 Modules
+app.use("/api/reports", reportsRouter);
 
 // API Base Information Endpoint
 app.get("/api", (_req: Request, res: Response) => {

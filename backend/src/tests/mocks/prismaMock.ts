@@ -139,9 +139,20 @@ export function createInMemoryPrisma() {
         return accounts.filter((x) => {
           if (where?.companyId && x.companyId !== where.companyId) return false;
           if (where?.id?.in && !where.id.in.includes(x.id)) return false;
-          if (where?.type && x.type !== where.type) return false;
+          if (where?.type) {
+            if (typeof where.type === "string" && x.type !== where.type) return false;
+            if (where.type.in && !where.type.in.includes(x.type)) return false;
+          }
           if (where?.isActive !== undefined && x.isActive !== where.isActive) return false;
           if (where?.systemKey?.in && !where.systemKey.in.includes(x.systemKey)) return false;
+          if (where?.OR && Array.isArray(where.OR)) {
+            const matchesOr = where.OR.some((cond: any) => {
+              if (cond.systemKey?.in && cond.systemKey.in.includes(x.systemKey)) return true;
+              if (cond.code?.in && cond.code.in.includes(x.code)) return true;
+              return false;
+            });
+            if (!matchesOr) return false;
+          }
           return true;
         });
       }),
@@ -361,10 +372,18 @@ export function createInMemoryPrisma() {
             if (where?.contactId && l.contactId !== where.contactId) return false;
             if (where?.accountId && typeof where.accountId === "string" && l.accountId !== where.accountId) return false;
             if (where?.accountId?.in && !where.accountId.in.includes(l.accountId)) return false;
-            if (where?.entry?.companyId) {
+            if (where?.entry) {
               const ent = journalEntries.find((e) => e.id === l.entryId);
-              if (!ent || ent.companyId !== where.entry.companyId) return false;
+              if (!ent) return false;
+              if (where.entry.companyId && ent.companyId !== where.entry.companyId) return false;
               if (where.entry.status && ent.status !== where.entry.status) return false;
+              if (where.entry.date) {
+                const ed = new Date(ent.date);
+                if (where.entry.date.lt && !(ed < new Date(where.entry.date.lt))) return false;
+                if (where.entry.date.lte && !(ed <= new Date(where.entry.date.lte))) return false;
+                if (where.entry.date.gt && !(ed > new Date(where.entry.date.gt))) return false;
+                if (where.entry.date.gte && !(ed >= new Date(where.entry.date.gte))) return false;
+              }
             }
             return true;
           })
@@ -561,19 +580,28 @@ export function createInMemoryPrisma() {
           items: include?.items ? invoiceItems.filter((it) => it.invoiceId === inv.id) : []
         };
       }),
-      findMany: vi.fn(async ({ where, skip = 0, take = 20, include }: any) => {
-        return invoices
+      findMany: vi.fn(async ({ where, skip = 0, take, include }: any) => {
+        const filtered = invoices
           .filter((i) => {
             if (where?.companyId && i.companyId !== where.companyId) return false;
             if (where?.contactId && i.contactId !== where.contactId) return false;
-            if (where?.status && i.status !== where.status) return false;
+            if (where?.status) {
+              if (typeof where.status === "string" && i.status !== where.status) return false;
+              if (where.status.in && !where.status.in.includes(i.status)) return false;
+              if (where.status.notIn && where.status.notIn.includes(i.status)) return false;
+            }
+            if (where?.date) {
+              const d = new Date(i.date);
+              if (where.date.gte && !(d >= new Date(where.date.gte))) return false;
+              if (where.date.lte && !(d <= new Date(where.date.lte))) return false;
+            }
             return true;
-          })
-          .slice(skip, skip + take)
-          .map((i) => ({
-            ...i,
-            items: include?.items ? invoiceItems.filter((it) => it.invoiceId === i.id) : []
-          }));
+          });
+        const sliced = take !== undefined ? filtered.slice(skip, skip + take) : filtered.slice(skip);
+        return sliced.map((i) => ({
+          ...i,
+          items: include?.items ? invoiceItems.filter((it) => it.invoiceId === i.id) : []
+        }));
       }),
       count: vi.fn(async ({ where }: any) => {
         return invoices.filter((i) => !where?.companyId || i.companyId === where.companyId).length;
@@ -648,19 +676,28 @@ export function createInMemoryPrisma() {
           items: include?.items ? billItems.filter((it) => it.billId === b.id) : []
         };
       }),
-      findMany: vi.fn(async ({ where, skip = 0, take = 20, include }: any) => {
-        return bills
+      findMany: vi.fn(async ({ where, skip = 0, take, include }: any) => {
+        const filtered = bills
           .filter((x) => {
             if (where?.companyId && x.companyId !== where.companyId) return false;
             if (where?.contactId && x.contactId !== where.contactId) return false;
-            if (where?.status && x.status !== where.status) return false;
+            if (where?.status) {
+              if (typeof where.status === "string" && x.status !== where.status) return false;
+              if (where.status.in && !where.status.in.includes(x.status)) return false;
+              if (where.status.notIn && where.status.notIn.includes(x.status)) return false;
+            }
+            if (where?.date) {
+              const d = new Date(x.date);
+              if (where.date.gte && !(d >= new Date(where.date.gte))) return false;
+              if (where.date.lte && !(d <= new Date(where.date.lte))) return false;
+            }
             return true;
-          })
-          .slice(skip, skip + take)
-          .map((b) => ({
-            ...b,
-            items: include?.items ? billItems.filter((it) => it.billId === b.id) : []
-          }));
+          });
+        const sliced = take !== undefined ? filtered.slice(skip, skip + take) : filtered.slice(skip);
+        return sliced.map((b) => ({
+          ...b,
+          items: include?.items ? billItems.filter((it) => it.billId === b.id) : []
+        }));
       }),
       count: vi.fn(async ({ where }: any) => {
         return bills.filter((b) => !where?.companyId || b.companyId === where.companyId).length;
