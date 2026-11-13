@@ -19,7 +19,10 @@ import {
   Building2,
   RefreshCw,
   CheckCircle2,
-  AlertCircle
+  AlertCircle,
+  Landmark,
+  CalendarClock,
+  UserCheck
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { checkBackendHealth } from "@/lib/api";
@@ -39,8 +42,10 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Purchase Bills", href: "/bills", icon: Receipt },
   { label: "Inventory & Stock", href: "/inventory", icon: Package },
   { label: "Financial Reports", href: "/reports", icon: BarChart3 },
+  { label: "Bank Reconciliation", href: "/banking/reconciliation", icon: Landmark },
   { label: "Audit Log", href: "/audit-log", icon: ShieldAlert },
-  { label: "Settings", href: "/settings", icon: Settings }
+  { label: "Fiscal & Periods", href: "/settings/fiscal", icon: CalendarClock },
+  { label: "Team & Roles", href: "/settings/team", icon: UserCheck }
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {

@@ -39,6 +39,14 @@ export function isEqual(a: string | number | Decimal, b: string | number | Decim
   return toDecimal(a).equals(toDecimal(b));
 }
 
+export function equalsDecimal(a: string | number | Decimal, b: string | number | Decimal): boolean {
+  return isEqual(a, b);
+}
+
+export function sumDecimals(values: (string | number | Decimal)[]): Decimal {
+  return values.reduce<Decimal>((acc, val) => acc.plus(toDecimal(val)), new Decimal(0));
+}
+
 export function isZero(a: string | number | Decimal): boolean {
   return toDecimal(a).isZero();
 }

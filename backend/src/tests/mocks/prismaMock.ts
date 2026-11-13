@@ -24,6 +24,9 @@ export function createInMemoryPrisma() {
   const payments: any[] = [];
   const creditNotes: any[] = [];
   const creditNoteItems: any[] = [];
+  const bankAccounts: any[] = [];
+  const bankStatements: any[] = [];
+  const bankStatementLines: any[] = [];
 
   const db = {
     user: {
@@ -82,28 +85,68 @@ export function createInMemoryPrisma() {
       })
     },
     membership: {
-      create: vi.fn(async ({ data }: any) => {
+      create: vi.fn(async ({ data, include }: any) => {
         const m = { ...data };
         memberships.push(m);
-        return m;
+        let res: any = { ...m };
+        if (include?.user) {
+          res.user = users.find((u) => u.id === m.userId);
+        }
+        return res;
       }),
       findUnique: vi.fn(async ({ where }: any) => {
         const { userId, companyId } = where.userId_companyId || {};
         const found = memberships.find((m) => m.userId === userId && m.companyId === companyId);
         if (!found) return null;
         const comp = companies.find((c) => c.id === found.companyId);
-        return { ...found, company: comp };
+        const usr = users.find((u) => u.id === found.userId);
+        return { ...found, company: comp, user: usr };
       }),
       findMany: vi.fn(async ({ where, include }: any) => {
         return memberships
-          .filter((m) => !where?.userId || m.userId === where.userId)
+          .filter((m) => {
+            if (where?.userId && m.userId !== where.userId) return false;
+            if (where?.companyId && m.companyId !== where.companyId) return false;
+            return true;
+          })
           .map((m) => {
+            let res: any = { ...m };
             if (include?.company) {
-              const comp = companies.find((c) => c.id === m.companyId);
-              return { ...m, company: comp };
+              res.company = companies.find((c) => c.id === m.companyId);
             }
-            return m;
+            if (include?.user) {
+              res.user = users.find((u) => u.id === m.userId);
+            }
+            return res;
           });
+      }),
+      update: vi.fn(async ({ where, data, include }: any) => {
+        const { userId, companyId } = where.userId_companyId || {};
+        const idx = memberships.findIndex((m) => m.userId === userId && m.companyId === companyId);
+        if (idx >= 0) {
+          memberships[idx] = { ...memberships[idx], ...data };
+          let res: any = { ...memberships[idx] };
+          if (include?.user) {
+            res.user = users.find((u) => u.id === userId);
+          }
+          return res;
+        }
+        return null;
+      }),
+      delete: vi.fn(async ({ where }: any) => {
+        const { userId, companyId } = where.userId_companyId || {};
+        const idx = memberships.findIndex((m) => m.userId === userId && m.companyId === companyId);
+        if (idx >= 0) {
+          return memberships.splice(idx, 1)[0];
+        }
+        return null;
+      }),
+      count: vi.fn(async ({ where }: any) => {
+        return memberships.filter((m) => {
+          if (where?.companyId && m.companyId !== where.companyId) return false;
+          if (where?.role && m.role !== where.role) return false;
+          return true;
+        }).length;
       })
     },
     account: {
@@ -280,8 +323,33 @@ export function createInMemoryPrisma() {
       })
     },
     fiscalYear: {
+      create: vi.fn(async ({ data }: any) => {
+        const fy = { id: `fy-${Date.now()}-${Math.random()}`, isClosed: false, ...data };
+        fiscalYears.push(fy);
+        return fy;
+      }),
       findFirst: vi.fn(async ({ where }: any) => {
-        return fiscalYears.find((fy) => fy.companyId === where.companyId && fy.isClosed === where.isClosed) || null;
+        return (
+          fiscalYears.find((fy) => {
+            if (where?.id && fy.id !== where.id) return false;
+            if (where?.companyId && fy.companyId !== where.companyId) return false;
+            if (where?.isClosed !== undefined && fy.isClosed !== where.isClosed) return false;
+            if (where?.startDate?.lte && new Date(fy.startDate).getTime() > new Date(where.startDate.lte).getTime()) return false;
+            if (where?.endDate?.gte && new Date(fy.endDate).getTime() < new Date(where.endDate.gte).getTime()) return false;
+            return true;
+          }) || null
+        );
+      }),
+      findMany: vi.fn(async ({ where }: any) => {
+        return fiscalYears.filter((fy) => !where?.companyId || fy.companyId === where.companyId);
+      }),
+      update: vi.fn(async ({ where, data }: any) => {
+        const idx = fiscalYears.findIndex((fy) => fy.id === where.id);
+        if (idx >= 0) {
+          fiscalYears[idx] = { ...fiscalYears[idx], ...data };
+          return fiscalYears[idx];
+        }
+        return null;
       })
     },
     journalEntry: {
@@ -792,11 +860,147 @@ export function createInMemoryPrisma() {
         return creditNotes.find((cn) => (!where.id || cn.id === where.id) && (!where.companyId || cn.companyId === where.companyId)) || null;
       })
     },
+    bankAccount: {
+      create: vi.fn(async ({ data }: any) => {
+        const ba = { id: `ba-${Date.now()}-${Math.random()}`, ...data };
+        bankAccounts.push(ba);
+        return ba;
+      }),
+      findFirst: vi.fn(async ({ where }: any) => {
+        return (
+          bankAccounts.find((ba) => {
+            if (where?.id && ba.id !== where.id) return false;
+            if (where?.companyId && ba.companyId !== where.companyId) return false;
+            return true;
+          }) || null
+        );
+      }),
+      findMany: vi.fn(async ({ where }: any) => {
+        return bankAccounts.filter((ba) => !where?.companyId || ba.companyId === where.companyId);
+      })
+    },
+    bankStatement: {
+      create: vi.fn(async ({ data }: any) => {
+        const stmtId = `stmt-${Date.now()}-${Math.random()}`;
+        const stmt = {
+          id: stmtId,
+          companyId: data.companyId,
+          bankAccountId: data.bankAccountId,
+          fileName: data.fileName,
+          uploadedAt: new Date(),
+          startDate: data.startDate,
+          endDate: data.endDate,
+          openingBalance: data.openingBalance,
+          closingBalance: data.closingBalance
+        };
+        bankStatements.push(stmt);
+
+        if (data.lines?.create) {
+          for (const line of data.lines.create) {
+            bankStatementLines.push({
+              id: `stmt-line-${Date.now()}-${Math.random()}`,
+              statementId: stmtId,
+              ...line
+            });
+          }
+        }
+
+        return {
+          ...stmt,
+          lines: bankStatementLines.filter((l) => l.statementId === stmtId)
+        };
+      }),
+      findFirst: vi.fn(async ({ where, include }: any) => {
+        const found = bankStatements.find((s) => {
+          if (where?.id && s.id !== where.id) return false;
+          if (where?.companyId && s.companyId !== where.companyId) return false;
+          if (where?.bankAccountId && s.bankAccountId !== where.bankAccountId) return false;
+          return true;
+        });
+        if (!found) return null;
+
+        const res: any = { ...found };
+        if (include?.lines) {
+          res.lines = bankStatementLines.filter((l) => l.statementId === found.id);
+        }
+        if (include?.bankAccount) {
+          res.bankAccount = bankAccounts.find((ba) => ba.id === found.bankAccountId);
+        }
+        return res;
+      }),
+      findMany: vi.fn(async ({ where }: any) => {
+        return bankStatements.filter((s) => !where?.companyId || s.companyId === where.companyId);
+      })
+    },
+    bankStatementLine: {
+      findFirst: vi.fn(async ({ where }: any) => {
+        return (
+          bankStatementLines.find((l) => {
+            if (where?.id && l.id !== where.id) return false;
+            if (where?.companyId && l.companyId !== where.companyId) return false;
+            return true;
+          }) || null
+        );
+      }),
+      findMany: vi.fn(async ({ where }: any) => {
+        return bankStatementLines.filter((l) => {
+          if (where?.companyId && l.companyId !== where.companyId) return false;
+          if (where?.statementId && l.statementId !== where.statementId) return false;
+          return true;
+        });
+      }),
+      update: vi.fn(async ({ where, data }: any) => {
+        const idx = bankStatementLines.findIndex((l) => l.id === where.id);
+        if (idx >= 0) {
+          bankStatementLines[idx] = { ...bankStatementLines[idx], ...data };
+          return bankStatementLines[idx];
+        }
+        return null;
+      })
+    },
     auditLog: {
       create: vi.fn(async ({ data }: any) => {
-        const log = { id: `log-${Date.now()}`, timestamp: new Date(), ...data };
+        const log = { id: `log-${Date.now()}-${Math.random()}`, timestamp: new Date(), ...data };
         auditLogs.push(log);
         return log;
+      }),
+      findMany: vi.fn(async ({ where, skip = 0, take = 50 }: any) => {
+        return auditLogs
+          .filter((l) => {
+            if (where?.companyId && l.companyId !== where.companyId) return false;
+            if (where?.userId && l.userId !== where.userId) return false;
+            if (where?.model && l.model !== where.model) return false;
+            if (where?.action && l.action !== where.action) return false;
+            if (where?.timestamp?.gte && new Date(l.timestamp).getTime() < new Date(where.timestamp.gte).getTime()) return false;
+            if (where?.timestamp?.lte && new Date(l.timestamp).getTime() > new Date(where.timestamp.lte).getTime()) return false;
+            return true;
+          })
+          .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
+          .slice(skip, skip + take);
+      }),
+      findFirst: vi.fn(async ({ where }: any) => {
+        return (
+          auditLogs.find((l) => {
+            if (where?.id && l.id !== where.id) return false;
+            if (where?.companyId && l.companyId !== where.companyId) return false;
+            return true;
+          }) || null
+        );
+      }),
+      count: vi.fn(async ({ where }: any) => {
+        return auditLogs.filter((l) => {
+          if (where?.companyId && l.companyId !== where.companyId) return false;
+          if (where?.userId && l.userId !== where.userId) return false;
+          if (where?.model && l.model !== where.model) return false;
+          if (where?.action && l.action !== where.action) return false;
+          return true;
+        }).length;
+      }),
+      update: vi.fn(async () => {
+        throw new Error("AuditLog records are immutable. UPDATE is forbidden.");
+      }),
+      delete: vi.fn(async () => {
+        throw new Error("AuditLog records are immutable. DELETE is forbidden.");
       })
     },
     $transaction: vi.fn(async (callback: any) => {
@@ -831,7 +1035,10 @@ export function createInMemoryPrisma() {
       billItems,
       payments,
       creditNotes,
-      creditNoteItems
+      creditNoteItems,
+      bankAccounts,
+      bankStatements,
+      bankStatementLines
     }
   };
 }

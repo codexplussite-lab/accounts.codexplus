@@ -303,11 +303,45 @@ model Payment {
 }
 
 model BankAccount {
-  id        String  @id @default(uuid())
+  id        String          @id @default(uuid())
   companyId String
   name      String
-  accountId String  // Chart of Accounts ka linked account
+  accountId String          // Chart of Accounts ka linked account
   accountNo String?
+  statements BankStatement[]
+
+  @@index([companyId])
+}
+
+model BankStatement {
+  id             String              @id @default(uuid())
+  companyId      String
+  bankAccountId  String
+  fileName       String
+  uploadedAt     DateTime            @default(now())
+  startDate      DateTime?
+  endDate        DateTime?
+  openingBalance Decimal             @default(0) @db.Decimal(15, 2)
+  closingBalance Decimal             @default(0) @db.Decimal(15, 2)
+  bankAccount    BankAccount         @relation(fields: [bankAccountId], references: [id])
+  lines          BankStatementLine[]
+
+  @@index([companyId, bankAccountId])
+}
+
+model BankStatementLine {
+  id            String        @id @default(uuid())
+  companyId     String
+  statementId   String
+  date          DateTime
+  description   String?
+  reference     String?
+  amount        Decimal       @db.Decimal(15, 2) // + for deposit, - for withdrawal
+  matchedLineId String?       // references JournalLine.id
+  isReconciled  Boolean       @default(false)
+  statement     BankStatement @relation(fields: [statementId], references: [id])
+
+  @@index([companyId, statementId])
 }
 
 model CreditNote {

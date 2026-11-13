@@ -16,6 +16,10 @@ import purchaseRouter from "./modules/purchases/routes.js";
 import paymentRouter from "./modules/payments/routes.js";
 import inventoryRouter from "./modules/inventory/routes.js";
 import reportsRouter from "./modules/reports/routes.js";
+import auditRouter from "./modules/audit/routes.js";
+import fiscalRouter from "./modules/fiscal/routes.js";
+import bankingRouter from "./modules/banking/routes.js";
+import userRouter from "./modules/users/routes.js";
 
 export const app = express();
 
@@ -71,6 +75,12 @@ app.use("/api/inventory", inventoryRouter);
 
 // Mount Phase 4 Modules
 app.use("/api/reports", reportsRouter);
+
+// Mount Phase 5 Modules
+app.use("/api/audit-logs", auditRouter);
+app.use("/api/fiscal", fiscalRouter);
+app.use("/api/banking", bankingRouter);
+app.use("/api/users", userRouter);
 
 // API Base Information Endpoint
 app.get("/api", (_req: Request, res: Response) => {
