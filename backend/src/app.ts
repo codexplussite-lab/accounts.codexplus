@@ -20,6 +20,12 @@ import auditRouter from "./modules/audit/routes.js";
 import fiscalRouter from "./modules/fiscal/routes.js";
 import bankingRouter from "./modules/banking/routes.js";
 import userRouter from "./modules/users/routes.js";
+import dashboardRouter from "./modules/dashboard/routes.js";
+import recurringRouter from "./modules/recurring/routes.js";
+import currencyRouter from "./modules/currency/routes.js";
+import importRouter from "./modules/import/routes.js";
+import approvalRouter from "./modules/approvals/routes.js";
+import rateLimit from "express-rate-limit";
 
 export const app = express();
 
@@ -33,6 +39,16 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization", "X-Company-Id"]
   })
 );
+
+// Production Rate Limiter
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: env.NODE_ENV === "test" ? 10000 : 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: { code: "TOO_MANY_REQUESTS", message: "Too many requests. Please try again later." } }
+});
+app.use("/api", apiLimiter);
 
 // Body and Cookie Parsing Middleware
 app.use(express.json({ limit: "10mb" }));
@@ -81,6 +97,13 @@ app.use("/api/audit-logs", auditRouter);
 app.use("/api/fiscal", fiscalRouter);
 app.use("/api/banking", bankingRouter);
 app.use("/api/users", userRouter);
+
+// Mount Phase 6 Modules
+app.use("/api/dashboard", dashboardRouter);
+app.use("/api/recurring", recurringRouter);
+app.use("/api/currency", currencyRouter);
+app.use("/api/import", importRouter);
+app.use("/api/approvals", approvalRouter);
 
 // API Base Information Endpoint
 app.get("/api", (_req: Request, res: Response) => {

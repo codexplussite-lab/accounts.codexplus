@@ -26,6 +26,15 @@ export class InventoryController {
     }
   }
 
+  static async getProductByBarcode(req: Request, res: Response, next: NextFunction) {
+    try {
+      const product = await ProductService.getProductByBarcode(req.companyId!, req.params.barcode);
+      res.json({ data: product });
+    } catch (err) {
+      next(err);
+    }
+  }
+
   static async createProduct(req: Request, res: Response, next: NextFunction) {
     try {
       const product = await ProductService.createProduct(req.companyId!, req.user!.id, req.body);

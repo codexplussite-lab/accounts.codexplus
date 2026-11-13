@@ -22,7 +22,8 @@ import {
   AlertCircle,
   Landmark,
   CalendarClock,
-  UserCheck
+  UserCheck,
+  Database
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { checkBackendHealth } from "@/lib/api";
@@ -39,10 +40,12 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Journal Entries", href: "/journal", icon: BookOpen },
   { label: "Contacts", href: "/contacts", icon: Users },
   { label: "Sales Invoices", href: "/invoices", icon: FileText },
+  { label: "Recurring Invoices", href: "/invoices/recurring", icon: RefreshCw },
   { label: "Purchase Bills", href: "/bills", icon: Receipt },
   { label: "Inventory & Stock", href: "/inventory", icon: Package },
   { label: "Financial Reports", href: "/reports", icon: BarChart3 },
   { label: "Bank Reconciliation", href: "/banking/reconciliation", icon: Landmark },
+  { label: "CSV Data Import", href: "/tools/import", icon: Database },
   { label: "Audit Log", href: "/audit-log", icon: ShieldAlert },
   { label: "Fiscal & Periods", href: "/settings/fiscal", icon: CalendarClock },
   { label: "Team & Roles", href: "/settings/team", icon: UserCheck }

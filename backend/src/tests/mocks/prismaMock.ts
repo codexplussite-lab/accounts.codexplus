@@ -27,6 +27,9 @@ export function createInMemoryPrisma() {
   const bankAccounts: any[] = [];
   const bankStatements: any[] = [];
   const bankStatementLines: any[] = [];
+  const currencyRates: any[] = [];
+  const recurringInvoices: any[] = [];
+  const emailLogs: any[] = [];
 
   const db = {
     user: {
@@ -434,7 +437,7 @@ export function createInMemoryPrisma() {
       })
     },
     journalLine: {
-      findMany: vi.fn(async ({ where, include, orderBy }: any) => {
+      findMany: vi.fn(async ({ where, include, select, orderBy }: any) => {
         return journalLines
           .filter((l) => {
             if (where?.contactId && l.contactId !== where.contactId) return false;
@@ -457,10 +460,10 @@ export function createInMemoryPrisma() {
           })
           .map((l) => {
             const res: any = { ...l };
-            if (include?.account) {
+            if (include?.account || select?.account) {
               res.account = accounts.find((a) => a.id === l.accountId);
             }
-            if (include?.entry) {
+            if (include?.entry || select?.entry) {
               res.entry = journalEntries.find((e) => e.id === l.entryId);
             }
             return res;
@@ -547,7 +550,9 @@ export function createInMemoryPrisma() {
             (p) =>
               (!where.id || p.id === where.id) &&
               (!where.companyId || p.companyId === where.companyId) &&
-              (!where.sku || p.sku === where.sku)
+              (!where.sku || p.sku === where.sku) &&
+              (!where.barcode || p.barcode === where.barcode) &&
+              (where.isActive === undefined || p.isActive === where.isActive)
           ) || null
         );
       }),
@@ -1003,6 +1008,69 @@ export function createInMemoryPrisma() {
         throw new Error("AuditLog records are immutable. DELETE is forbidden.");
       })
     },
+    currencyRate: {
+      create: vi.fn(async ({ data }: any) => {
+        const cr = { id: `cr-${Date.now()}-${Math.random()}`, date: new Date(), ...data };
+        currencyRates.push(cr);
+        return cr;
+      }),
+      findFirst: vi.fn(async ({ where }: any) => {
+        return (
+          currencyRates.find(
+            (cr) =>
+              (!where.companyId || cr.companyId === where.companyId) &&
+              (!where.fromCode || cr.fromCode === where.fromCode) &&
+              (!where.toCode || cr.toCode === where.toCode)
+          ) || null
+        );
+      }),
+      findMany: vi.fn(async ({ where }: any) => {
+        return currencyRates.filter((cr) => !where?.companyId || cr.companyId === where.companyId);
+      })
+    },
+    recurringInvoice: {
+      create: vi.fn(async ({ data }: any) => {
+        const ri = { id: `rec-${Date.now()}-${Math.random()}`, createdAt: new Date(), ...data };
+        recurringInvoices.push(ri);
+        return ri;
+      }),
+      findFirst: vi.fn(async ({ where }: any) => {
+        return (
+          recurringInvoices.find(
+            (ri) =>
+              (!where.id || ri.id === where.id) &&
+              (!where.companyId || ri.companyId === where.companyId) &&
+              (where.isActive === undefined || ri.isActive === where.isActive)
+          ) || null
+        );
+      }),
+      findMany: vi.fn(async ({ where }: any) => {
+        return recurringInvoices.filter((ri) => {
+          if (where?.companyId && ri.companyId !== where.companyId) return false;
+          if (where?.isActive !== undefined && ri.isActive !== where.isActive) return false;
+          if (where?.nextRunDate?.lte && new Date(ri.nextRunDate).getTime() > new Date(where.nextRunDate.lte).getTime()) return false;
+          return true;
+        });
+      }),
+      update: vi.fn(async ({ where, data }: any) => {
+        const idx = recurringInvoices.findIndex((ri) => ri.id === where.id);
+        if (idx >= 0) {
+          recurringInvoices[idx] = { ...recurringInvoices[idx], ...data };
+          return recurringInvoices[idx];
+        }
+        return null;
+      })
+    },
+    emailLog: {
+      create: vi.fn(async ({ data }: any) => {
+        const el = { id: `email-${Date.now()}-${Math.random()}`, sentAt: new Date(), ...data };
+        emailLogs.push(el);
+        return el;
+      }),
+      findMany: vi.fn(async ({ where }: any) => {
+        return emailLogs.filter((el) => !where?.companyId || el.companyId === where.companyId);
+      })
+    },
     $transaction: vi.fn(async (callback: any) => {
       if (typeof callback === "function") {
         return callback(db);
@@ -1038,7 +1106,10 @@ export function createInMemoryPrisma() {
       creditNoteItems,
       bankAccounts,
       bankStatements,
-      bankStatementLines
+      bankStatementLines,
+      currencyRates,
+      recurringInvoices,
+      emailLogs
     }
   };
 }

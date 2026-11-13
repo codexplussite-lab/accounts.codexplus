@@ -261,4 +261,16 @@ export class ProductService {
 
     return { success: true };
   }
+
+  static async getProductByBarcode(companyId: string, barcode: string) {
+    const product = await prisma.product.findFirst({
+      where: { companyId, barcode, isActive: true }
+    });
+
+    if (!product) {
+      throw new AppError(`No active product found with barcode '${barcode}'.`, 404, "BARCODE_NOT_FOUND");
+    }
+
+    return ProductService.getProductById(companyId, product.id);
+  }
 }

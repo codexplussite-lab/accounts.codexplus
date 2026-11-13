@@ -58,6 +58,20 @@ enum PaymentType {
   MADE
 }
 
+enum ApprovalStatus {
+  DRAFT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
+}
+
+enum RecurringFrequency {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
 model User {
   id           String       @id @default(uuid())
   email        String       @unique
@@ -234,8 +248,9 @@ model Invoice {
   taxTotal   Decimal       @default(0) @db.Decimal(15, 2)
   total      Decimal       @default(0) @db.Decimal(15, 2)
   paidAmount Decimal       @default(0) @db.Decimal(15, 2)
-  notes      String?
-  items      InvoiceItem[]
+  notes          String?
+  approvalStatus ApprovalStatus @default(DRAFT)
+  items          InvoiceItem[]
 
   @@unique([companyId, number])
 }
@@ -266,8 +281,9 @@ model Bill {
   subtotal     Decimal    @default(0) @db.Decimal(15, 2)
   taxTotal     Decimal    @default(0) @db.Decimal(15, 2)
   total        Decimal    @default(0) @db.Decimal(15, 2)
-  paidAmount   Decimal    @default(0) @db.Decimal(15, 2)
-  items        BillItem[]
+  paidAmount     Decimal        @default(0) @db.Decimal(15, 2)
+  approvalStatus ApprovalStatus @default(DRAFT)
+  items          BillItem[]
 
   @@unique([companyId, number])
 }
@@ -396,5 +412,49 @@ model AuditLog {
   timestamp DateTime @default(now())
 
   @@index([companyId, timestamp])
+}
+
+model CurrencyRate {
+  id        String   @id @default(uuid())
+  companyId String
+  fromCode  String   // USD, EUR, GBP, AED
+  toCode    String   // PKR (base currency)
+  rate      Decimal  @db.Decimal(15, 6)
+  date      DateTime @default(now())
+
+  @@index([companyId, fromCode, toCode])
+}
+
+model RecurringInvoice {
+  id          String             @id @default(uuid())
+  companyId   String
+  contactId   String
+  frequency   RecurringFrequency @default(MONTHLY)
+  startDate   DateTime
+  endDate     DateTime?
+  nextRunDate DateTime
+  autoPost    Boolean            @default(false)
+  isActive    Boolean            @default(true)
+  subtotal    Decimal            @default(0) @db.Decimal(15, 2)
+  taxTotal    Decimal            @default(0) @db.Decimal(15, 2)
+  total       Decimal            @default(0) @db.Decimal(15, 2)
+  notes       String?
+  items       Json               // snapshot of items
+  createdAt   DateTime           @default(now())
+
+  @@index([companyId, nextRunDate])
+}
+
+model EmailLog {
+  id           String   @id @default(uuid())
+  companyId    String
+  recipient    String
+  subject      String
+  documentType String   // INVOICE, BILL, REPORT
+  documentId   String
+  status       String   // SENT, FAILED
+  sentAt       DateTime @default(now())
+
+  @@index([companyId, documentId])
 }
 

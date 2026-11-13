@@ -53,6 +53,12 @@ router.post(
 );
 
 router.post(
+  "/invoices/:id/email",
+  requireRole(Role.OWNER, Role.ACCOUNTANT),
+  SalesController.emailInvoice
+);
+
+router.post(
   "/credit-notes",
   requireRole(Role.OWNER, Role.ACCOUNTANT),
   validateBody(createCreditNoteSchema),

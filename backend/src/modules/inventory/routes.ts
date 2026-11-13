@@ -24,6 +24,7 @@ router.use(authenticate, companyScope);
 
 // Products
 router.get("/products", validateQuery(productQuerySchema), InventoryController.listProducts);
+router.get("/products/barcode/:barcode", InventoryController.getProductByBarcode);
 router.get("/products/:id", InventoryController.getProductById);
 router.post(
   "/products",

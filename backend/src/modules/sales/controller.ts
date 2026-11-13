@@ -1,6 +1,8 @@
 import { Request, Response, NextFunction } from "express";
 import { SalesService } from "./service.js";
 
+import { EmailService } from "../email/service.js";
+
 export class SalesController {
   static async list(req: Request, res: Response, next: NextFunction) {
     try {
@@ -80,6 +82,27 @@ export class SalesController {
       res.setHeader("Content-Type", "application/pdf");
       res.setHeader("Content-Disposition", `attachment; filename="Invoice-${req.params.id}.pdf"`);
       res.send(buffer);
+    } catch (err) {
+      next(err);
+    }
+  }
+
+  static async emailInvoice(req: Request, res: Response, next: NextFunction) {
+    try {
+      const recipientEmail = req.body?.recipientEmail;
+      if (!recipientEmail) {
+        res.status(400).json({ error: { code: "RECIPIENT_REQUIRED", message: "recipientEmail is required." } });
+        return;
+      }
+      const result = await EmailService.sendInvoiceEmail(
+        req.companyId!,
+        req.params.id,
+        recipientEmail,
+        req.body?.subject,
+        req.user?.id,
+        req.ip
+      );
+      res.json({ data: result });
     } catch (err) {
       next(err);
     }
