@@ -85,10 +85,63 @@ export class RecurringService {
    * Lists recurring invoice templates for company.
    */
   static async listTemplates(companyId: string) {
-    return prisma.recurringInvoice.findMany({
+    const templates = await prisma.recurringInvoice.findMany({
       where: { companyId },
       orderBy: { createdAt: "desc" }
     });
+
+    const contactIds = Array.from(new Set(templates.map((t) => t.contactId)));
+    const contacts = contactIds.length > 0
+      ? await prisma.contact.findMany({
+          where: { id: { in: contactIds }, companyId },
+          select: { id: true, name: true, email: true }
+        })
+      : [];
+
+    const contactMap = new Map(contacts.map((c) => [c.id, c]));
+
+    return templates.map((t) => ({
+      ...t,
+      contact: contactMap.get(t.contactId) || null,
+      totalOccurrences: 0
+    }));
+  }
+
+  /**
+   * Updates recurring template active/paused status.
+   */
+  static async updateStatus(
+    companyId: string,
+    templateId: string,
+    isActive: boolean,
+    userId?: string,
+    ipAddress?: string
+  ) {
+    const template = await prisma.recurringInvoice.findFirst({
+      where: { id: templateId, companyId }
+    });
+
+    if (!template) {
+      throw new AppError("Recurring invoice template not found.", 404, "TEMPLATE_NOT_FOUND");
+    }
+
+    const updated = await prisma.recurringInvoice.update({
+      where: { id: templateId },
+      data: { isActive }
+    });
+
+    await createAuditLog(prisma, {
+      companyId,
+      userId,
+      model: "RecurringInvoice",
+      objectId: templateId,
+      action: "UPDATE",
+      oldData: { isActive: template.isActive },
+      newData: { isActive },
+      ipAddress
+    });
+
+    return updated;
   }
 
   /**

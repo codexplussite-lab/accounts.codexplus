@@ -56,6 +56,7 @@ const SAMPLE_TEMPLATES: Record<ImportType, { filename: string; headers: string[]
 export default function BulkImportStudioPage() {
   const [activeType, setActiveType] = useState<ImportType>("products");
   const [file, setFile] = useState<File | null>(null);
+  const [rawCsvText, setRawCsvText] = useState<string>("");
   const [parsedRows, setParsedRows] = useState<Record<string, string>[]>([]);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ success: boolean; count?: number; message?: string } | null>(null);
@@ -136,6 +137,7 @@ export default function BulkImportStudioPage() {
     reader.onload = (event) => {
       try {
         const text = event.target?.result as string;
+        setRawCsvText(text);
         const rows = parseCsvText(text);
         setParsedRows(rows);
       } catch (err: any) {
@@ -163,7 +165,7 @@ export default function BulkImportStudioPage() {
           ? "/import/contacts"
           : "/import/products";
 
-      const payload = { rows: parsedRows };
+      const payload = { csvContent: rawCsvText, rows: parsedRows };
       const res = await apiClient<{ importedCount: number; message: string }>(endpoint, {
         method: "POST",
         body: JSON.stringify(payload)

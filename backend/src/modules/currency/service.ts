@@ -24,6 +24,10 @@ export class CurrencyService {
     const upperFrom = fromCode.trim().toUpperCase();
     const upperTo = toCode.trim().toUpperCase();
 
+    if (upperFrom === upperTo) {
+      throw new AppError("From and To currency codes must be different.", 400, "SAME_CURRENCY");
+    }
+
     const created = await prisma.currencyRate.create({
       data: {
         companyId,

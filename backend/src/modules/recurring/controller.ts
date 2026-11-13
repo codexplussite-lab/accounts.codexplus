@@ -53,4 +53,21 @@ export class RecurringController {
       next(error);
     }
   }
+
+  static async updateStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { isActive, status } = req.body;
+      const active = isActive !== undefined ? Boolean(isActive) : status === "ACTIVE";
+      const result = await RecurringService.updateStatus(
+        req.companyId!,
+        req.params.id,
+        active,
+        req.user?.id,
+        req.ip
+      );
+      res.json({ data: result });
+    } catch (error) {
+      next(error);
+    }
+  }
 }

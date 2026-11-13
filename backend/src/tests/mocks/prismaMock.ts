@@ -173,6 +173,7 @@ export function createInMemoryPrisma() {
           accounts.find((x) => {
             if (where.id && x.id !== where.id) return false;
             if (where.companyId && x.companyId !== where.companyId) return false;
+            if (where.code && x.code !== where.code) return false;
             if (where.systemKey) {
               if (where.systemKey.in && !where.systemKey.in.includes(x.systemKey)) return false;
               if (typeof where.systemKey === "string" && x.systemKey !== where.systemKey) return false;

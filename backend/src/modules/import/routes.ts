@@ -11,10 +11,15 @@ const router = Router();
 router.use(authenticate);
 router.use(companyScope);
 
-const CsvPayloadSchema = z.object({
-  csvContent: z.string().min(1, "CSV content cannot be empty"),
-  warehouseId: z.string().optional()
-});
+const CsvPayloadSchema = z
+  .object({
+    csvContent: z.string().optional(),
+    rows: z.array(z.record(z.any())).optional(),
+    warehouseId: z.string().optional()
+  })
+  .refine((data) => Boolean(data.csvContent || (data.rows && data.rows.length > 0)), {
+    message: "Either csvContent string or rows array must be provided"
+  });
 
 router.post(
   "/accounts",
@@ -22,9 +27,10 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const input = CsvPayloadSchema.parse(req.body);
+      const payload = input.csvContent || input.rows!;
       const data = await ImportService.importAccounts(
         req.companyId!,
-        input.csvContent,
+        payload,
         req.user?.id,
         req.ip
       );
@@ -41,9 +47,10 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const input = CsvPayloadSchema.parse(req.body);
+      const payload = input.csvContent || input.rows!;
       const data = await ImportService.importContacts(
         req.companyId!,
-        input.csvContent,
+        payload,
         req.user?.id,
         req.ip
       );
@@ -60,9 +67,10 @@ router.post(
   async (req: Request, res: Response, next: NextFunction) => {
     try {
       const input = CsvPayloadSchema.parse(req.body);
+      const payload = input.csvContent || input.rows!;
       const data = await ImportService.importProducts(
         req.companyId!,
-        input.csvContent,
+        payload,
         input.warehouseId,
         req.user?.id,
         req.ip

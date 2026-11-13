@@ -29,13 +29,14 @@ import { apiClient } from "@/lib/api";
 interface RecurringProfile {
   id: string;
   contactId: string;
-  frequency: "WEEKLY" | "MONTHLY" | "QUARTERLY" | "ANNUALLY";
-  interval: number;
+  frequency: "WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY";
+  interval?: number;
   startDate: string;
   endDate?: string | null;
   nextRunDate: string;
-  status: "ACTIVE" | "PAUSED" | "COMPLETED";
-  totalOccurrences: number;
+  isActive: boolean;
+  status?: "ACTIVE" | "PAUSED" | "COMPLETED";
+  totalOccurrences?: number;
   contact?: {
     id: string;
     name: string;
@@ -54,7 +55,7 @@ export default function RecurringInvoicesPage() {
   // Form state
   const [contacts, setContacts] = useState<any[]>([]);
   const [selectedContactId, setSelectedContactId] = useState("");
-  const [frequency, setFrequency] = useState<"WEEKLY" | "MONTHLY" | "QUARTERLY" | "ANNUALLY">("MONTHLY");
+  const [frequency, setFrequency] = useState<"WEEKLY" | "MONTHLY" | "QUARTERLY" | "YEARLY">("MONTHLY");
   const [startDate, setStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [itemDescription, setItemDescription] = useState("Monthly Software Maintenance Retainer");
   const [itemAmount, setItemAmount] = useState("25000.00");
@@ -114,7 +115,7 @@ export default function RecurringInvoicesPage() {
     try {
       await apiClient(`/recurring/${id}`, {
         method: "PATCH",
-        body: JSON.stringify({ status })
+        body: JSON.stringify({ isActive: status === "ACTIVE" })
       });
       fetchProfiles();
     } catch (err: any) {
@@ -280,23 +281,21 @@ export default function RecurringInvoicesPage() {
                           {new Date(p.nextRunDate).toLocaleDateString()}
                         </td>
                         <td className="py-3 px-4 text-center font-mono tabular-nums font-semibold">
-                          {p.totalOccurrences}
+                          {p.totalOccurrences ?? 0}
                         </td>
                         <td className="py-3 px-4 text-center">
                           <Badge
                             variant={
-                              p.status === "ACTIVE"
+                              p.isActive
                                 ? "paid"
-                                : p.status === "PAUSED"
-                                ? "partially_paid"
-                                : "draft"
+                                : "partially_paid"
                             }
                           >
-                            {p.status}
+                            {p.isActive ? "ACTIVE" : "PAUSED"}
                           </Badge>
                         </td>
                         <td className="py-3 px-4 text-right space-x-1.5">
-                          {p.status === "ACTIVE" ? (
+                          {p.isActive ? (
                             <Button
                               variant="outline"
                               size="sm"
@@ -379,7 +378,7 @@ export default function RecurringInvoicesPage() {
                       <option value="WEEKLY">Weekly</option>
                       <option value="MONTHLY">Monthly</option>
                       <option value="QUARTERLY">Quarterly</option>
-                      <option value="ANNUALLY">Annually</option>
+                      <option value="YEARLY">Yearly (Annual)</option>
                     </select>
                   </div>
                   <div>

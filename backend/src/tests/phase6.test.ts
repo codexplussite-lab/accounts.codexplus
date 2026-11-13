@@ -361,4 +361,93 @@ SKU-SWITCH-01,Cisco Catalyst 9300,120000.00,165000.00,9988771133,5.000`;
     expect(res.headers["x-content-type-options"]).toBe("nosniff");
     expect(res.headers["x-frame-options"]).toBeDefined();
   });
+
+  // --------------------------------------------------------------------------
+  // ACCEPTANCE CRITERION 9: QA Audit Regression Suite
+  // --------------------------------------------------------------------------
+  it("Acceptance Criterion 9: QA Audit Regression Suite verifies edge cases and fixes", async () => {
+    // 1. Currency validation: Reject identical currency pairs
+    const sameCurrRes = await request(app)
+      .post("/api/currency/rates")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Company-Id", companyId)
+      .send({
+        fromCode: "USD",
+        toCode: "USD",
+        rate: "1.00"
+      });
+    expect(sameCurrRes.status).toBe(400);
+
+    // 2. Approval workflow: Reject flow with mandatory reason
+    const draftRes = await request(app)
+      .post("/api/sales/invoices")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Company-Id", companyId)
+      .send({
+        contactId: customerId,
+        date: "2026-06-25",
+        items: [
+          {
+            description: "Advisory Services",
+            quantity: "1.000",
+            unitPrice: "25000.00"
+          }
+        ]
+      });
+    const rejInvId = draftRes.body.data.id;
+
+    await request(app)
+      .post(`/api/approvals/invoices/${rejInvId}/submit`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Company-Id", companyId);
+
+    const rejRes = await request(app)
+      .post(`/api/approvals/invoices/${rejInvId}/reject`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Company-Id", companyId)
+      .send({ reason: "Pricing discrepancy requires partner signoff" });
+    expect(rejRes.status).toBe(200);
+    expect(rejRes.body.data.approvalStatus).toBe("REJECTED");
+
+    // 3. Recurring template lifecycle: create, list, and PATCH /api/recurring/:id
+    const newTemplateRes = await request(app)
+      .post("/api/recurring")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Company-Id", companyId)
+      .send({
+        contactId: customerId,
+        frequency: "MONTHLY",
+        startDate: "2026-08-01",
+        items: [
+          {
+            description: "Cloud Hosting Maintenance",
+            quantity: "1.000",
+            unitPrice: "15000.00"
+          }
+        ]
+      });
+    expect(newTemplateRes.status).toBe(201);
+    const templateId = newTemplateRes.body.data.id;
+
+    const patchRes = await request(app)
+      .patch(`/api/recurring/${templateId}`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Company-Id", companyId)
+      .send({ isActive: false });
+    expect(patchRes.status).toBe(200);
+    expect(patchRes.body.data.isActive).toBe(false);
+
+    // 4. Bulk import: Accept parsed rows array directly
+    const importRowsRes = await request(app)
+      .post("/api/import/accounts")
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .set("X-Company-Id", companyId)
+      .send({
+        rows: [
+          { Code: "1099", Name: "Escrow Holding", Type: "ASSET" }
+        ]
+      });
+    expect(importRowsRes.status).toBe(200);
+    expect(importRowsRes.body.data.importedCount).toBe(1);
+  });
 });

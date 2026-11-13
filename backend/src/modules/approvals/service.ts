@@ -56,13 +56,14 @@ export class ApprovalService {
       throw new AppError("Invoice is not pending approval.", 422, "NOT_PENDING_APPROVAL");
     }
 
+    // Auto-post the invoice first to guarantee posting rules (stock, periods, balance) succeed
+    const posted = await SalesService.postInvoice(companyId, userId, invoice.id);
+
+    // Update approval status upon successful post
     await prisma.invoice.update({
       where: { id: invoice.id },
       data: { approvalStatus: ApprovalStatus.APPROVED }
     });
-
-    // Auto-post the invoice
-    const posted = await SalesService.postInvoice(companyId, userId, invoice.id);
 
     await createAuditLog(prisma, {
       companyId,
@@ -74,7 +75,10 @@ export class ApprovalService {
       ipAddress
     });
 
-    return posted;
+    return {
+      ...posted,
+      approvalStatus: ApprovalStatus.APPROVED
+    };
   }
 
   /**

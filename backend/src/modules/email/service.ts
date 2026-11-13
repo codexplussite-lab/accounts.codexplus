@@ -58,7 +58,7 @@ export class EmailService {
         phone: contact?.phone,
         email: recipientEmail
       },
-      items: invoice.items.map((it) => ({
+      items: (invoice.items || []).map((it) => ({
         description: it.description || "Product Item",
         quantity: toDecimal(it.quantity).toFixed(3),
         unitPrice: toDecimal(it.unitPrice).toFixed(2),

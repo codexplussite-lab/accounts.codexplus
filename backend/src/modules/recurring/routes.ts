@@ -12,6 +12,8 @@ router.use(companyScope);
 
 router.get("/", requireRole(Role.OWNER, Role.ACCOUNTANT), RecurringController.listTemplates);
 router.post("/", requireRole(Role.OWNER, Role.ACCOUNTANT), RecurringController.createTemplate);
+router.patch("/:id", requireRole(Role.OWNER, Role.ACCOUNTANT), RecurringController.updateStatus);
+router.post("/generate", requireRole(Role.OWNER, Role.ACCOUNTANT), RecurringController.processDue);
 router.post("/:id/generate", requireRole(Role.OWNER, Role.ACCOUNTANT), RecurringController.generateNow);
 router.post("/process-due", requireRole(Role.OWNER, Role.ACCOUNTANT), RecurringController.processDue);
 

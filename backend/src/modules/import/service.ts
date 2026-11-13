@@ -37,10 +37,45 @@ export class ImportService {
   }
 
   /**
+   * Helper to normalize input whether sent as raw CSV text or array of parsed objects.
+   */
+  static parseInput(input: string | Record<string, any>[]): string[][] {
+    if (Array.isArray(input)) {
+      if (input.length === 0) {
+        throw new AppError("CSV payload contains no data rows.", 400, "EMPTY_DATA");
+      }
+      const headers = Object.keys(input[0]);
+      const dataRows = input.map((obj) => headers.map((h) => String(obj[h] ?? "").trim()));
+      return [headers, ...dataRows];
+    }
+    return this.parseCsv(input);
+  }
+
+  /**
+   * Helper to safely sanitize numeric currency values without crashing the transaction.
+   */
+  static cleanToDecimal(val: any, fallback = new Decimal(0)): Decimal {
+    if (val === null || val === undefined || val === "") return fallback;
+    if (val instanceof Decimal) return val;
+    try {
+      const sanitized = String(val).replace(/[^0-9.-]+/g, "").trim();
+      if (!sanitized) return fallback;
+      return new Decimal(sanitized);
+    } catch {
+      return fallback;
+    }
+  }
+
+  /**
    * Bulk imports Chart of Accounts.
    */
-  static async importAccounts(companyId: string, csvContent: string, userId?: string, ipAddress?: string) {
-    const rows = this.parseCsv(csvContent);
+  static async importAccounts(
+    companyId: string,
+    csvContent: string | Record<string, any>[],
+    userId?: string,
+    ipAddress?: string
+  ) {
+    const rows = this.parseInput(csvContent);
     const headers = rows[0].map((h) => h.toLowerCase());
 
     const codeIdx = headers.findIndex((h) => h.includes("code"));
@@ -101,8 +136,13 @@ export class ImportService {
   /**
    * Bulk imports Contacts (Customers & Vendors).
    */
-  static async importContacts(companyId: string, csvContent: string, userId?: string, ipAddress?: string) {
-    const rows = this.parseCsv(csvContent);
+  static async importContacts(
+    companyId: string,
+    csvContent: string | Record<string, any>[],
+    userId?: string,
+    ipAddress?: string
+  ) {
+    const rows = this.parseInput(csvContent);
     const headers = rows[0].map((h) => h.toLowerCase());
 
     const nameIdx = headers.findIndex((h) => h.includes("name"));
@@ -167,12 +207,12 @@ export class ImportService {
    */
   static async importProducts(
     companyId: string,
-    csvContent: string,
+    csvContent: string | Record<string, any>[],
     warehouseId?: string,
     userId?: string,
     ipAddress?: string
   ) {
-    const rows = this.parseCsv(csvContent);
+    const rows = this.parseInput(csvContent);
     const headers = rows[0].map((h) => h.toLowerCase());
 
     const skuIdx = headers.findIndex((h) => h.includes("sku"));
@@ -211,10 +251,10 @@ export class ImportService {
 
         if (!sku || !name) continue;
 
-        const costPrice = costIdx !== -1 ? toDecimal(row[costIdx] || 0) : new Decimal(0);
-        const salePrice = saleIdx !== -1 ? toDecimal(row[saleIdx] || 0) : new Decimal(0);
-        const barcode = barcodeIdx !== -1 && row[barcodeIdx] ? row[barcodeIdx] : null;
-        const openingQty = openingStockIdx !== -1 ? toDecimal(row[openingStockIdx] || 0) : new Decimal(0);
+        const costPrice = costIdx !== -1 ? this.cleanToDecimal(row[costIdx]) : new Decimal(0);
+        const salePrice = saleIdx !== -1 ? this.cleanToDecimal(row[saleIdx]) : new Decimal(0);
+        const barcode = barcodeIdx !== -1 && row[barcodeIdx] ? String(row[barcodeIdx]).trim() : null;
+        const openingQty = openingStockIdx !== -1 ? this.cleanToDecimal(row[openingStockIdx]) : new Decimal(0);
 
         const existing = await tx.product.findFirst({
           where: { companyId, sku }

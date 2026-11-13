@@ -127,7 +127,8 @@ export class DashboardService {
     });
 
     const stockMovements = await prisma.stockMovement.findMany({
-      where: { companyId }
+      where: { companyId },
+      select: { productId: true, quantity: true }
     });
 
     const productStockMap = new Map<string, Decimal>();
@@ -170,7 +171,8 @@ export class DashboardService {
       where: {
         companyId,
         status: { in: [DocStatus.POSTED, DocStatus.PARTIALLY_PAID, DocStatus.PAID] }
-      }
+      },
+      select: { contactId: true, total: true }
     });
 
     const customerSpendMap = new Map<string, Decimal>();
