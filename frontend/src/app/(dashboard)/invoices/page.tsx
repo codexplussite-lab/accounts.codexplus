@@ -7,8 +7,9 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { apiClient } from "@/lib/api";
+import { apiClient, apiDownload } from "@/lib/api";
 import { PaymentDialog } from "@/components/payments/PaymentDialog";
+import { useAuth } from "@/context/AuthContext";
 
 interface Invoice {
   id: string;
@@ -26,6 +27,7 @@ interface Invoice {
 }
 
 export default function InvoicesPage() {
+  const { status, activeCompany } = useAuth();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("ALL");
@@ -35,14 +37,11 @@ export default function InvoicesPage() {
   const [paymentTarget, setPaymentTarget] = useState<Invoice | null>(null);
 
   const fetchInvoices = async () => {
+    if (status !== "AUTHENTICATED") return;
     setLoading(true);
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
 
     try {
       const res = await apiClient<Invoice[]>("/sales/invoices", {
-        companyId: companyId || undefined,
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         params: {
           status: activeTab === "ALL" ? undefined : activeTab,
           search: search || undefined
@@ -50,54 +49,22 @@ export default function InvoicesPage() {
       });
       setInvoices(res.data);
     } catch {
-      setInvoices([
-        {
-          id: "1",
-          number: "INV-2026-0001",
-          customerName: "Apex Global Traders",
-          contactId: "c1",
-          date: "2026-03-01T00:00:00.000Z",
-          dueDate: "2026-03-15T00:00:00.000Z",
-          status: "POSTED",
-          subtotal: "8000.00",
-          taxTotal: "1440.00",
-          total: "9440.00",
-          paidAmount: "4000.00",
-          balanceDue: "5440.00"
-        },
-        {
-          id: "2",
-          number: "INV-2026-0002",
-          customerName: "Horizon Enterprises",
-          contactId: "c2",
-          date: "2026-03-05T00:00:00.000Z",
-          dueDate: "2026-03-20T00:00:00.000Z",
-          status: "PAID",
-          subtotal: "3000.00",
-          taxTotal: "540.00",
-          total: "3540.00",
-          paidAmount: "3540.00",
-          balanceDue: "0.00"
-        }
-      ]);
+      setInvoices([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchInvoices();
-  }, [activeTab, search]);
+    if (status === "AUTHENTICATED") {
+      fetchInvoices();
+    }
+  }, [status, activeCompany?.id, activeTab, search]);
 
   const handlePostInvoice = async (id: string) => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
-
     try {
       await apiClient(`/sales/invoices/${id}/post`, {
-        method: "POST",
-        companyId: companyId || undefined,
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+        method: "POST"
       });
       fetchInvoices();
     } catch (err: any) {
@@ -106,24 +73,8 @@ export default function InvoicesPage() {
   };
 
   const handleDownloadPDF = async (id: string, number: string) => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
-
     try {
-      const response = await fetch(`http://localhost:4000/api/sales/invoices/${id}/pdf`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "X-Company-Id": companyId || ""
-        }
-      });
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${number}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
+      await apiDownload(`/sales/invoices/${id}/pdf`, `${number}.pdf`);
     } catch {
       alert("Failed to download PDF");
     }

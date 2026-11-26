@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface LedgerEntry {
   id: string;
@@ -22,6 +23,7 @@ interface LedgerEntry {
 }
 
 export default function ContactDetailPage() {
+  const { status, activeCompany } = useAuth();
   const params = useParams();
   const id = params?.id as string;
 
@@ -30,68 +32,26 @@ export default function ContactDetailPage() {
   const [loading, setLoading] = useState(true);
 
   const fetchLedger = async () => {
-    if (!id) return;
+    if (!id || status !== "AUTHENTICATED") return;
     setLoading(true);
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
-
     try {
-      const res = await apiClient<{ contact: any; ledger: LedgerEntry[] }>(`/contacts/${id}/ledger`, {
-        companyId: companyId || undefined,
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
+      const res = await apiClient<{ contact: any; ledger: LedgerEntry[] }>(`/contacts/${id}/ledger`);
       setContact(res.data.contact);
       setLedger(res.data.ledger);
     } catch {
-      // Mock fallback for presentation
-      setContact({
-        id,
-        name: "Apex Global Traders",
-        type: "CUSTOMER",
-        openingBalance: "1000.00",
-        closingBalance: "2500.00"
-      });
-      setLedger([
-        {
-          id: "opening",
-          date: "2026-01-01T00:00:00.000Z",
-          documentNumber: "OPENING",
-          sourceType: "OPENING_BALANCE",
-          description: "Opening Balance",
-          debit: "1000.00",
-          credit: "0.00",
-          runningBalance: "1000.00"
-        },
-        {
-          id: "1",
-          date: "2026-03-01T10:00:00.000Z",
-          documentNumber: "INV-2026-0001",
-          sourceType: "INVOICE",
-          description: "Tax Invoice # INV-2026-0001",
-          debit: "2000.00",
-          credit: "0.00",
-          runningBalance: "3000.00"
-        },
-        {
-          id: "2",
-          date: "2026-03-05T12:00:00.000Z",
-          documentNumber: "PAY-2026-0001",
-          sourceType: "PAYMENT",
-          description: "Payment Received # PAY-2026-0001",
-          debit: "0.00",
-          credit: "500.00",
-          runningBalance: "2500.00"
-        }
-      ]);
+      setContact(null);
+      setLedger([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchLedger();
-  }, [id]);
+    if (status === "AUTHENTICATED") {
+      fetchLedger();
+    }
+  }, [id, status, activeCompany?.id]);
 
   return (
     <AppShell>

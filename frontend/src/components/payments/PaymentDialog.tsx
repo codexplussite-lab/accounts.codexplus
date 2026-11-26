@@ -49,14 +49,9 @@ export function PaymentDialog({
     setLoading(true);
     setError(null);
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
-
     try {
       await apiClient("/payments", {
         method: "POST",
-        companyId: companyId || undefined,
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: JSON.stringify({
           type,
           contactId,

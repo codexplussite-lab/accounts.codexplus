@@ -16,6 +16,7 @@ export class AuthController {
         httpOnly: true,
         secure: env.NODE_ENV === "production",
         sameSite: "lax",
+        path: "/",
         maxAge: COOKIE_MAX_AGE_MS
       });
 
@@ -40,6 +41,7 @@ export class AuthController {
         httpOnly: true,
         secure: env.NODE_ENV === "production",
         sameSite: "lax",
+        path: "/",
         maxAge: COOKIE_MAX_AGE_MS
       });
 
@@ -73,7 +75,8 @@ export class AuthController {
       res.clearCookie(REFRESH_COOKIE_NAME, {
         httpOnly: true,
         secure: env.NODE_ENV === "production",
-        sameSite: "lax"
+        sameSite: "lax",
+        path: "/"
       });
 
       res.status(200).json({

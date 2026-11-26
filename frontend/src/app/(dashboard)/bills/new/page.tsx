@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface BillLineItem {
   id: string;
@@ -20,6 +21,7 @@ interface BillLineItem {
 
 export default function NewBillPage() {
   const router = useRouter();
+  const { status } = useAuth();
 
   const [vendors, setVendors] = useState<any[]>([]);
   const [taxes, setTaxes] = useState<any[]>([]);
@@ -38,27 +40,22 @@ export default function NewBillPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (status !== "AUTHENTICATED") return;
+
     const fetchLookups = async () => {
       setLoadingLookups(true);
-      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-      const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
 
       try {
         const [vRes, tRes] = await Promise.all([
           apiClient<any[]>("/contacts", {
-            companyId: companyId || undefined,
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
             params: { type: "VENDOR" }
           }),
-          apiClient<any[]>("/taxes", {
-            companyId: companyId || undefined,
-            headers: token ? { Authorization: `Bearer ${token}` } : {}
-          })
+          apiClient<any[]>("/taxes")
         ]);
 
-        setVendors(vRes.data);
-        if (vRes.data.length > 0) setContactId(vRes.data[0].id);
-        setTaxes(tRes.data);
+        setVendors(vRes.data || []);
+        if (vRes.data && vRes.data.length > 0) setContactId(vRes.data[0].id);
+        setTaxes(tRes.data || []);
       } catch {
         setVendors([{ id: "vend-1", name: "Prime Materials Ltd" }]);
         setContactId("vend-1");
@@ -69,7 +66,7 @@ export default function NewBillPage() {
     };
 
     fetchLookups();
-  }, []);
+  }, [status]);
 
   const addItem = () => {
     setItems([
@@ -120,14 +117,9 @@ export default function NewBillPage() {
     setSaving(true);
     setError(null);
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
-
     try {
       const res = await apiClient<{ id: string }>("/purchases/bills", {
         method: "POST",
-        companyId: companyId || undefined,
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: JSON.stringify({
           contactId,
           vendorBillNo: vendorBillNo || null,
@@ -144,9 +136,7 @@ export default function NewBillPage() {
 
       if (postImmediately) {
         await apiClient(`/purchases/bills/${res.data.id}/post`, {
-          method: "POST",
-          companyId: companyId || undefined,
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
+          method: "POST"
         });
       }
 

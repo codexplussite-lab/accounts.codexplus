@@ -21,3 +21,4 @@ export const CreateRecurringInvoiceSchema = z.object({
 });
 
 export type CreateRecurringInvoiceInput = z.infer<typeof CreateRecurringInvoiceSchema>;
+

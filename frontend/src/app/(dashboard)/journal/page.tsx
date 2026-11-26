@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
 
 interface JournalLine {
   id: string;
@@ -46,58 +47,34 @@ interface JournalEntry {
 }
 
 export default function JournalPage() {
+  const { status, activeCompany } = useAuth();
   const [entries, setEntries] = useState<JournalEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
 
   const fetchEntries = async () => {
+    if (status !== "AUTHENTICATED") return;
     setLoading(true);
     try {
-      const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
       const res = await apiClient<JournalEntry[]>("/journal", {
-        companyId: companyId || undefined,
         params: {
           status: statusFilter === "ALL" ? undefined : statusFilter
         }
       });
       setEntries(res.data);
     } catch {
-      // Mock fallback data for preview if offline
-      setEntries([
-        {
-          id: "je-1",
-          number: "JV-2026-0001",
-          date: "2026-11-12T00:00:00.000Z",
-          narration: "Initial Capital Investment by Partners",
-          status: "POSTED",
-          sourceType: "MANUAL",
-          lines: [
-            { id: "l1", accountId: "acc-1", debit: "500000.00", credit: "0.00", memo: "Cash invested", account: { code: "1001", name: "Cash", type: "ASSET" } },
-            { id: "l2", accountId: "acc-8", debit: "0.00", credit: "500000.00", memo: "Partner equity", account: { code: "3001", name: "Capital", type: "EQUITY" } }
-          ]
-        },
-        {
-          id: "je-2",
-          number: "JV-2026-0002",
-          date: "2026-11-12T00:00:00.000Z",
-          narration: "Office Supplies and Minor Equipment Purchase",
-          status: "POSTED",
-          sourceType: "MANUAL",
-          lines: [
-            { id: "l3", accountId: "acc-14", debit: "12500.00", credit: "0.00", memo: "Stationery", account: { code: "6004", name: "Miscellaneous Expense", type: "EXPENSE" } },
-            { id: "l4", accountId: "acc-1", debit: "0.00", credit: "12500.00", memo: "Petty cash payout", account: { code: "1001", name: "Cash", type: "ASSET" } }
-          ]
-        }
-      ]);
+      setEntries([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchEntries();
-  }, [statusFilter]);
+    if (status === "AUTHENTICATED") {
+      fetchEntries();
+    }
+  }, [status, activeCompany?.id, statusFilter]);
 
   return (
     <AppShell>

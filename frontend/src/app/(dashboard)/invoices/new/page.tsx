@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface LineItem {
   id: string;
@@ -21,6 +22,7 @@ interface LineItem {
 
 export default function NewInvoicePage() {
   const router = useRouter();
+  const { status } = useAuth();
 
   const [customers, setCustomers] = useState<any[]>([]);
   const [taxes, setTaxes] = useState<any[]>([]);
@@ -39,27 +41,22 @@ export default function NewInvoicePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (status !== "AUTHENTICATED") return;
+
     const fetchLookups = async () => {
       setLoadingLookups(true);
-      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-      const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
 
       try {
         const [cRes, tRes] = await Promise.all([
           apiClient<any[]>("/contacts", {
-            companyId: companyId || undefined,
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
             params: { type: "CUSTOMER" }
           }),
-          apiClient<any[]>("/taxes", {
-            companyId: companyId || undefined,
-            headers: token ? { Authorization: `Bearer ${token}` } : {}
-          })
+          apiClient<any[]>("/taxes")
         ]);
 
-        setCustomers(cRes.data);
-        if (cRes.data.length > 0) setContactId(cRes.data[0].id);
-        setTaxes(tRes.data);
+        setCustomers(cRes.data || []);
+        if (cRes.data && cRes.data.length > 0) setContactId(cRes.data[0].id);
+        setTaxes(tRes.data || []);
       } catch {
         // Fallback for presentation
         setCustomers([{ id: "cust-1", name: "Apex Global Traders" }]);
@@ -71,7 +68,7 @@ export default function NewInvoicePage() {
     };
 
     fetchLookups();
-  }, []);
+  }, [status]);
 
   const addItem = () => {
     setItems([
@@ -124,14 +121,9 @@ export default function NewInvoicePage() {
     setSaving(true);
     setError(null);
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
-
     try {
       const res = await apiClient<{ id: string }>("/sales/invoices", {
         method: "POST",
-        companyId: companyId || undefined,
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: JSON.stringify({
           contactId,
           date,
@@ -149,9 +141,7 @@ export default function NewInvoicePage() {
 
       if (postImmediately) {
         await apiClient(`/sales/invoices/${res.data.id}/post`, {
-          method: "POST",
-          companyId: companyId || undefined,
-          headers: token ? { Authorization: `Bearer ${token}` } : {}
+          method: "POST"
         });
       }
 

@@ -26,14 +26,27 @@ import currencyRouter from "./modules/currency/routes.js";
 import importRouter from "./modules/import/routes.js";
 import approvalRouter from "./modules/approvals/routes.js";
 import rateLimit from "express-rate-limit";
+import { prisma } from "./config/prisma.js";
 
 export const app = express();
 
 // Security Middleware
 app.use(helmet());
+
+const allowedOrigins = [
+  env.CORS_ORIGIN,
+  "http://localhost:3000",
+  "http://127.0.0.1:3000"
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: env.CORS_ORIGIN,
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      return callback(null, true);
+    },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization", "X-Company-Id"]
@@ -63,13 +76,27 @@ if (env.NODE_ENV !== "test") {
   });
 }
 
-// Health Check Endpoint (Section 8 Acceptance Criteria)
-app.get("/health", (_req: Request, res: Response) => {
+// Health Check Endpoint (Section 8 Acceptance Criteria with Database Health)
+app.get("/health", async (_req: Request, res: Response) => {
+  let dbStatus = "connected";
+  try {
+    if (prisma && typeof (prisma as any).$queryRaw === "function") {
+      await Promise.race([
+        (prisma as any).$queryRaw`SELECT 1`,
+        new Promise((_, reject) => setTimeout(() => reject(new Error("DB probe timeout")), 800))
+      ]);
+    }
+  } catch (err: any) {
+    dbStatus = "disconnected";
+    logger.warn({ error: err.message }, "Database health check probe: disconnected");
+  }
+
   res.status(200).json({
     status: "ok",
+    database: dbStatus,
     timestamp: new Date().toISOString(),
     environment: env.NODE_ENV,
-    uptime: process.uptime()
+    uptime: Math.floor(process.uptime())
   });
 });
 

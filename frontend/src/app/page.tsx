@@ -32,6 +32,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface DashboardData {
   balances: {
@@ -95,12 +96,14 @@ interface DashboardData {
 }
 
 export default function ExecutiveDashboard() {
+  const { status, activeCompany } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeActivityTab, setActiveActivityTab] = useState<"invoices" | "payments" | "transactions">("invoices");
 
   const fetchDashboard = async () => {
+    if (status !== "AUTHENTICATED") return;
     setLoading(true);
     setError(null);
     try {
@@ -114,8 +117,10 @@ export default function ExecutiveDashboard() {
   };
 
   useEffect(() => {
-    fetchDashboard();
-  }, []);
+    if (status === "AUTHENTICATED") {
+      fetchDashboard();
+    }
+  }, [status, activeCompany?.id]);
 
   const formatPKR = (val: string | number) => {
     const num = typeof val === "string" ? parseFloat(val) : val;

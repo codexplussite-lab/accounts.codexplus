@@ -23,10 +23,12 @@ import {
   Landmark,
   CalendarClock,
   UserCheck,
-  Database
+  Database,
+  LogOut
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { checkBackendHealth } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface NavItem {
   label: string;
@@ -52,8 +54,9 @@ const NAV_ITEMS: NavItem[] = [
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const { user, activeCompany, companies, switchCompany, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
-  const [health, setHealth] = useState<{ status: string; timestamp: string; environment: string } | null>(null);
+  const [health, setHealth] = useState<{ status: string; database?: string; timestamp: string; environment: string } | null>(null);
   const [loadingHealth, setLoadingHealth] = useState(true);
   const pathname = usePathname();
 
@@ -75,6 +78,20 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, []);
 
+  const companyInitials = (activeCompany?.name || "AE")
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+  const userInitials = (user?.name || "US")
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
   return (
     <div className="flex min-h-screen bg-canvas text-ink-primary">
       {/* Left Navigation Rail */}
@@ -86,22 +103,38 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       >
         {/* Company Switcher Header */}
         <div className="flex h-14 items-center justify-between border-b border-border px-3.5">
-          <div className="flex items-center space-x-2.5 overflow-hidden">
+          <div className="flex items-center space-x-2.5 overflow-hidden flex-1">
             <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded bg-ink-primary text-xs font-mono font-bold text-white shadow-subtle">
-              AE
+              {companyInitials}
             </div>
             {!collapsed && (
-              <div className="truncate">
-                <div className="flex items-center space-x-1.5">
-                  <span className="truncate text-xs font-semibold text-ink-primary">Acme Enterprise</span>
-                </div>
-                <p className="text-[10px] font-mono text-ink-secondary">PKR · Fiscal 2026</p>
+              <div className="truncate flex-1">
+                {companies.length > 1 ? (
+                  <select
+                    value={activeCompany?.id || ""}
+                    onChange={(e) => switchCompany(e.target.value)}
+                    className="w-full bg-transparent text-xs font-semibold text-ink-primary truncate focus:outline-none cursor-pointer"
+                  >
+                    {companies.map((c) => (
+                      <option key={c.id} value={c.id} className="bg-surface text-ink-primary">
+                        {c.name}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="truncate text-xs font-semibold text-ink-primary">
+                    {activeCompany?.name || "Enterprise Ledger"}
+                  </div>
+                )}
+                <p className="text-[10px] font-mono text-ink-secondary">
+                  {activeCompany?.currency || "PKR"} · Fiscal 2026
+                </p>
               </div>
             )}
           </div>
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="flex h-6 w-6 items-center justify-center rounded text-ink-secondary hover:bg-canvas hover:text-ink-primary transition-colors"
+            className="flex h-6 w-6 items-center justify-center rounded text-ink-secondary hover:bg-canvas hover:text-ink-primary transition-colors ml-1"
             title={collapsed ? "Expand rail" : "Collapse rail"}
           >
             {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
@@ -132,17 +165,32 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           })}
         </nav>
 
-        {/* User Scope Footer */}
+        {/* User Scope Footer with Logout */}
         <div className="border-t border-border p-3">
-          <div className="flex items-center space-x-2.5">
-            <div className="h-6 w-6 rounded-full bg-emerald-light border border-emerald-border flex items-center justify-center text-[10px] font-bold text-emerald-brand font-mono">
-              OW
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2.5 overflow-hidden">
+              <div className="h-6 w-6 rounded-full bg-emerald-light border border-emerald-border flex items-center justify-center text-[10px] font-bold text-emerald-brand font-mono flex-shrink-0">
+                {userInitials}
+              </div>
+              {!collapsed && (
+                <div className="truncate">
+                  <p className="truncate text-xs font-medium text-ink-primary leading-tight">
+                    {user?.name || "User"}
+                  </p>
+                  <p className="text-[10px] font-mono text-emerald-brand uppercase font-semibold">
+                    {activeCompany?.role || "MEMBER"}
+                  </p>
+                </div>
+              )}
             </div>
             {!collapsed && (
-              <div className="truncate">
-                <p className="truncate text-xs font-medium text-ink-primary leading-tight">Syed Moosa</p>
-                <p className="text-[10px] font-mono text-emerald-brand uppercase font-semibold">OWNER</p>
-              </div>
+              <button
+                onClick={logout}
+                className="text-ink-muted hover:text-rose-600 transition-colors p-1"
+                title="Sign out of ERP"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
             )}
           </div>
         </div>
@@ -153,7 +201,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* Sticky Top Header */}
         <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-surface px-6">
           <div className="flex items-center space-x-2 text-xs">
-            <span className="text-ink-secondary">Acme Enterprise</span>
+            <span className="text-ink-secondary">{activeCompany?.name || "Acme Enterprise"}</span>
             <span className="text-border">/</span>
             <span className="font-medium text-ink-primary">
               {NAV_ITEMS.find((n) => n.href === pathname)?.label || "Workspace"}
@@ -174,7 +222,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               />
               <span className="font-mono text-[11px] text-ink-secondary">
-                Backend: {loadingHealth ? "Probing..." : health?.status === "ok" ? "Online (4000)" : "Offline"}
+                Backend:{" "}
+                {loadingHealth
+                  ? "Probing..."
+                  : health?.status === "ok"
+                  ? `Online (4000)${health?.database === "connected" ? " · DB Connected" : ""}`
+                  : "Offline"}
               </span>
               <button
                 onClick={verifyHealth}

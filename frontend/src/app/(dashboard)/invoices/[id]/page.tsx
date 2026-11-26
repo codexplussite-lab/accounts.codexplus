@@ -8,10 +8,12 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { apiClient } from "@/lib/api";
+import { apiClient, apiDownload } from "@/lib/api";
 import { PaymentDialog } from "@/components/payments/PaymentDialog";
+import { useAuth } from "@/context/AuthContext";
 
 export default function InvoiceDetailPage() {
+  const { status, activeCompany } = useAuth();
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
@@ -22,59 +24,30 @@ export default function InvoiceDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchInvoice = async () => {
-    if (!id) return;
+    if (!id || status !== "AUTHENTICATED") return;
     setLoading(true);
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
-
     try {
-      const res = await apiClient<any>(`/sales/invoices/${id}`, {
-        companyId: companyId || undefined,
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
+      const res = await apiClient<any>(`/sales/invoices/${id}`);
       setInvoice(res.data);
     } catch {
-      // Mock fallback for presentation
-      setInvoice({
-        id,
-        number: "INV-2026-0001",
-        customerName: "Apex Global Traders",
-        contactId: "c1",
-        date: "2026-03-01T00:00:00.000Z",
-        dueDate: "2026-03-15T00:00:00.000Z",
-        status: "POSTED",
-        subtotal: "8000.00",
-        taxTotal: "1440.00",
-        total: "9440.00",
-        paidAmount: "4000.00",
-        balanceDue: "5440.00",
-        items: [
-          { id: "1", description: "Industrial Steel Coil", quantity: "10.000", unitPrice: "800.00", discount: "0.00", taxAmount: "1440.00", lineTotal: "9440.00" }
-        ],
-        payments: [
-          { id: "p1", number: "PAY-2026-0001", amount: "4000.00", date: "2026-03-05T00:00:00.000Z", method: "Bank Transfer", reference: "TXN-998822" }
-        ]
-      });
+      setInvoice(null);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchInvoice();
-  }, [id]);
+    if (status === "AUTHENTICATED") {
+      fetchInvoice();
+    }
+  }, [id, status, activeCompany?.id]);
 
   const handlePost = async () => {
     setActionLoading(true);
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
-
     try {
       await apiClient(`/sales/invoices/${id}/post`, {
-        method: "POST",
-        companyId: companyId || undefined,
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+        method: "POST"
       });
       fetchInvoice();
     } catch (err: any) {
@@ -89,14 +62,9 @@ export default function InvoiceDetailPage() {
     if (!reason) return;
 
     setActionLoading(true);
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
-
     try {
       await apiClient(`/sales/invoices/${id}/void`, {
         method: "POST",
-        companyId: companyId || undefined,
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: JSON.stringify({ reason })
       });
       fetchInvoice();
@@ -108,24 +76,8 @@ export default function InvoiceDetailPage() {
   };
 
   const handleDownloadPDF = async () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
-
     try {
-      const response = await fetch(`http://localhost:4000/api/sales/invoices/${id}/pdf`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "X-Company-Id": companyId || ""
-        }
-      });
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${invoice.number}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
+      await apiDownload(`/sales/invoices/${id}/pdf`, `${invoice?.number || "invoice"}.pdf`);
     } catch {
       alert("Failed to download PDF");
     }

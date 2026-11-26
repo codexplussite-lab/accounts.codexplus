@@ -1077,7 +1077,8 @@ export function createInMemoryPrisma() {
         return callback(db);
       }
       return Promise.all(callback);
-    })
+    }),
+    $queryRaw: vi.fn(async () => [{ 1: 1 }])
   };
 
   return {

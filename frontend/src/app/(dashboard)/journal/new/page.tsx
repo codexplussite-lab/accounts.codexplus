@@ -22,6 +22,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
 import { formatCurrency } from "@/lib/utils";
+import { useAuth } from "@/context/AuthContext";
 
 interface AccountOption {
   id: string;
@@ -40,6 +41,7 @@ interface FormRow {
 
 export default function NewJournalEntryPage() {
   const router = useRouter();
+  const { status, activeCompany } = useAuth();
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [narration, setNarration] = useState("");
   const [accounts, setAccounts] = useState<AccountOption[]>([]);
@@ -55,35 +57,22 @@ export default function NewJournalEntryPage() {
 
   useEffect(() => {
     const fetchAccounts = async () => {
+      if (status !== "AUTHENTICATED") return;
       setLoadingAccounts(true);
       try {
-        const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
-        const res = await apiClient<AccountOption[]>("/accounts", {
-          companyId: companyId || undefined
-        });
+        const res = await apiClient<AccountOption[]>("/accounts");
         setAccounts(res.data);
       } catch {
-        // Fallback accounts for presentation if offline
-        setAccounts([
-          { id: "acc-1", code: "1001", name: "Cash on Hand", type: "ASSET" },
-          { id: "acc-2", code: "1002", name: "Operating Bank Account", type: "ASSET" },
-          { id: "acc-3", code: "1100", name: "Accounts Receivable", type: "ASSET" },
-          { id: "acc-4", code: "1200", name: "Inventory", type: "ASSET" },
-          { id: "acc-5", code: "2001", name: "Accounts Payable", type: "LIABILITY" },
-          { id: "acc-6", code: "2100", name: "Sales Tax Payable", type: "LIABILITY" },
-          { id: "acc-7", code: "3001", name: "Owner Capital", type: "EQUITY" },
-          { id: "acc-8", code: "4001", name: "Sales Revenue", type: "INCOME" },
-          { id: "acc-9", code: "5001", name: "Cost of Goods Sold", type: "EXPENSE" },
-          { id: "acc-10", code: "6001", name: "Rent Expense", type: "EXPENSE" },
-          { id: "acc-11", code: "6004", name: "Miscellaneous Expense", type: "EXPENSE" }
-        ]);
+        setAccounts([]);
       } finally {
         setLoadingAccounts(false);
       }
     };
 
-    fetchAccounts();
-  }, []);
+    if (status === "AUTHENTICATED") {
+      fetchAccounts();
+    }
+  }, [status, activeCompany?.id]);
 
   const handleRowChange = (id: string, field: keyof FormRow, value: string) => {
     setRows((prev) =>
@@ -134,7 +123,6 @@ export default function NewJournalEntryPage() {
     setPosting(true);
 
     try {
-      const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
       const endpoint = asDraft ? "/journal/draft" : "/journal";
 
       const payload = {
@@ -150,7 +138,6 @@ export default function NewJournalEntryPage() {
 
       await apiClient(endpoint, {
         method: "POST",
-        companyId: companyId || undefined,
         body: JSON.stringify(payload)
       });
 

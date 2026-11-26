@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface Account {
   id: string;
@@ -33,6 +34,7 @@ interface Account {
 }
 
 export default function AccountsPage() {
+  const { status, activeCompany } = useAuth();
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("ALL");
@@ -48,11 +50,10 @@ export default function AccountsPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const fetchAccounts = async () => {
+    if (status !== "AUTHENTICATED") return;
     setLoading(true);
     try {
-      const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
       const res = await apiClient<Account[]>("/accounts", {
-        companyId: companyId || undefined,
         params: {
           type: activeTab === "ALL" ? undefined : activeTab,
           search: search || undefined
@@ -60,27 +61,17 @@ export default function AccountsPage() {
       });
       setAccounts(res.data);
     } catch {
-      // Mock fallback for presentation if offline
-      setAccounts([
-        { id: "1", code: "1001", name: "Cash on Hand", type: "ASSET", parentId: null, isSystem: true, systemKey: "CASH", isActive: true },
-        { id: "2", code: "1002", name: "Main Operating Bank", type: "ASSET", parentId: null, isSystem: true, systemKey: "BANK", isActive: true },
-        { id: "3", code: "1100", name: "Accounts Receivable", type: "ASSET", parentId: null, isSystem: true, systemKey: "AR", isActive: true },
-        { id: "4", code: "1200", name: "Inventory Asset", type: "ASSET", parentId: null, isSystem: true, systemKey: "INVENTORY", isActive: true },
-        { id: "5", code: "2001", name: "Accounts Payable", type: "LIABILITY", parentId: null, isSystem: true, systemKey: "AP", isActive: true },
-        { id: "6", code: "2100", name: "Sales Tax Payable", type: "LIABILITY", parentId: null, isSystem: true, systemKey: "SALES_TAX_PAYABLE", isActive: true },
-        { id: "7", code: "3001", name: "Owner Capital", type: "EQUITY", parentId: null, isSystem: true, systemKey: "CAPITAL", isActive: true },
-        { id: "8", code: "3100", name: "Retained Earnings", type: "EQUITY", parentId: null, isSystem: true, systemKey: "RETAINED_EARNINGS", isActive: true },
-        { id: "9", code: "4001", name: "General Sales Income", type: "INCOME", parentId: null, isSystem: true, systemKey: "SALES", isActive: true },
-        { id: "10", code: "5001", name: "Cost of Goods Sold", type: "EXPENSE", parentId: null, isSystem: true, systemKey: "COGS", isActive: true }
-      ]);
+      setAccounts([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchAccounts();
-  }, [activeTab]);
+    if (status === "AUTHENTICATED") {
+      fetchAccounts();
+    }
+  }, [status, activeCompany?.id, activeTab]);
 
   const handleCreateAccount = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,10 +79,8 @@ export default function AccountsPage() {
     setFormError(null);
 
     try {
-      const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
       await apiClient("/accounts", {
         method: "POST",
-        companyId: companyId || undefined,
         body: JSON.stringify({
           code,
           name,

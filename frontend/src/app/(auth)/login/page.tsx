@@ -7,10 +7,11 @@ import { ShieldCheck, Lock, Mail, ArrowRight, AlertCircle, Loader2 } from "lucid
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 export default function LoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -22,23 +23,7 @@ export default function LoginPage() {
     setError(null);
 
     try {
-      const res = await apiClient<{ user: any; companies: any[]; accessToken: string }>(
-        "/auth/login",
-        {
-          method: "POST",
-          body: JSON.stringify({ email, password })
-        }
-      );
-
-      // Save token in memory/localStorage for API requests
-      if (typeof window !== "undefined") {
-        localStorage.setItem("accessToken", res.data.accessToken);
-        if (res.data.companies && res.data.companies.length > 0) {
-          localStorage.setItem("activeCompanyId", res.data.companies[0].id);
-        }
-      }
-
-      router.push("/");
+      await login({ email, password });
     } catch (err: any) {
       setError(err.message || "Invalid credentials. Please verify your email and password.");
     } finally {

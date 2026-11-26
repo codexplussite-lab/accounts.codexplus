@@ -8,10 +8,12 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { apiClient } from "@/lib/api";
+import { apiClient, apiDownload } from "@/lib/api";
 import { PaymentDialog } from "@/components/payments/PaymentDialog";
+import { useAuth } from "@/context/AuthContext";
 
 export default function BillDetailPage() {
+  const { status, activeCompany } = useAuth();
   const params = useParams();
   const router = useRouter();
   const id = params?.id as string;
@@ -22,59 +24,30 @@ export default function BillDetailPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const fetchBill = async () => {
-    if (!id) return;
+    if (!id || status !== "AUTHENTICATED") return;
     setLoading(true);
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
-
     try {
-      const res = await apiClient<any>(`/purchases/bills/${id}`, {
-        companyId: companyId || undefined,
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
-      });
+      const res = await apiClient<any>(`/purchases/bills/${id}`);
       setBill(res.data);
     } catch {
-      setBill({
-        id,
-        number: "BILL-2026-0001",
-        vendorBillNo: "VB-8899",
-        vendorName: "Prime Materials Ltd",
-        contactId: "v1",
-        date: "2026-03-02T00:00:00.000Z",
-        dueDate: "2026-03-16T00:00:00.000Z",
-        status: "POSTED",
-        subtotal: "10000.00",
-        taxTotal: "1800.00",
-        total: "11800.00",
-        paidAmount: "5000.00",
-        balanceDue: "6800.00",
-        items: [
-          { id: "1", description: "Industrial Raw Steel", quantity: "20.000", unitCost: "500.00", taxAmount: "1800.00", lineTotal: "11800.00" }
-        ],
-        payments: [
-          { id: "p1", number: "PAY-2026-0002", amount: "5000.00", date: "2026-03-06T00:00:00.000Z", method: "Bank Transfer", reference: "DISB-1011" }
-        ]
-      });
+      setBill(null);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchBill();
-  }, [id]);
+    if (status === "AUTHENTICATED") {
+      fetchBill();
+    }
+  }, [id, status, activeCompany?.id]);
 
   const handlePost = async () => {
     setActionLoading(true);
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
-
     try {
       await apiClient(`/purchases/bills/${id}/post`, {
-        method: "POST",
-        companyId: companyId || undefined,
-        headers: token ? { Authorization: `Bearer ${token}` } : {}
+        method: "POST"
       });
       fetchBill();
     } catch (err: any) {
@@ -89,14 +62,9 @@ export default function BillDetailPage() {
     if (!reason) return;
 
     setActionLoading(true);
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
-
     try {
       await apiClient(`/purchases/bills/${id}/void`, {
         method: "POST",
-        companyId: companyId || undefined,
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: JSON.stringify({ reason })
       });
       fetchBill();
@@ -108,24 +76,8 @@ export default function BillDetailPage() {
   };
 
   const handleDownloadPDF = async () => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
-
     try {
-      const response = await fetch(`http://localhost:4000/api/purchases/bills/${id}/pdf`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          "X-Company-Id": companyId || ""
-        }
-      });
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `${bill.number}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
+      await apiDownload(`/purchases/bills/${id}/pdf`, `${bill?.number || "bill"}.pdf`);
     } catch {
       alert("Failed to download PDF");
     }

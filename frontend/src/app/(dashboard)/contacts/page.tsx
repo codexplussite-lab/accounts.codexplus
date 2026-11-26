@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface Contact {
   id: string;
@@ -28,6 +29,7 @@ interface Contact {
 }
 
 export default function ContactsPage() {
+  const { status, activeCompany } = useAuth();
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<string>("ALL");
@@ -46,14 +48,11 @@ export default function ContactsPage() {
   const [formError, setFormError] = useState<string | null>(null);
 
   const fetchContacts = async () => {
+    if (status !== "AUTHENTICATED") return;
     setLoading(true);
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
 
     try {
       const res = await apiClient<Contact[]>("/contacts", {
-        companyId: companyId || undefined,
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         params: {
           type: activeTab === "ALL" ? undefined : activeTab,
           search: search || undefined
@@ -61,54 +60,26 @@ export default function ContactsPage() {
       });
       setContacts(res.data);
     } catch {
-      setContacts([
-        {
-          id: "1",
-          name: "Apex Global Traders",
-          type: "CUSTOMER",
-          phone: "+92 300 1234567",
-          email: "billing@apex.com",
-          ntn: "1234567-8",
-          address: "Industrial Area, Karachi",
-          openingBalance: "1000.00",
-          balances: { receivable: "1000.00", payable: "0.00", netBalance: "1000.00" },
-          isActive: true
-        },
-        {
-          id: "2",
-          name: "Prime Materials Ltd",
-          type: "VENDOR",
-          phone: "+92 321 7654321",
-          email: "accounts@primemat.com",
-          ntn: "9876543-2",
-          address: "S.I.T.E, Karachi",
-          openingBalance: "500.00",
-          balances: { receivable: "0.00", payable: "500.00", netBalance: "-500.00" },
-          isActive: true
-        }
-      ]);
+      setContacts([]);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchContacts();
-  }, [activeTab, search]);
+    if (status === "AUTHENTICATED") {
+      fetchContacts();
+    }
+  }, [status, activeCompany?.id, activeTab, search]);
 
   const handleCreateContact = async (e: React.FormEvent) => {
     e.preventDefault();
     setCreating(true);
     setFormError(null);
 
-    const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : null;
-    const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : null;
-
     try {
       await apiClient("/contacts", {
         method: "POST",
-        companyId: companyId || undefined,
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
         body: JSON.stringify({
           name,
           type,

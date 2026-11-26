@@ -162,3 +162,4 @@ Verify API and UI connectivity after deployment:
 - **Automated Neon Backups**: Neon maintains continuous WAL-based Point-In-Time-Recovery (PITR) with up to 30 days history.
 - **Period Locking**: Finance managers must lock periods after monthly and annual reconciliations via `/settings/fiscal` to prevent retro-active changes.
 - **Year-End Closing**: Execute the closing engine at the conclusion of each fiscal year to zero out P&L accounts and roll net profits into Retained Earnings (`3100`).
+

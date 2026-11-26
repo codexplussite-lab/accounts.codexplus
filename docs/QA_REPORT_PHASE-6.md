@@ -181,3 +181,4 @@ npm --prefix frontend run build
 The All-in-One Accounting + Inventory ERP Software has been audited line-by-line, hardened against financial and architectural edge cases, and verified against all Master Build Document specifications.
 
 The system is certified **100% PRODUCTION READY**.
+

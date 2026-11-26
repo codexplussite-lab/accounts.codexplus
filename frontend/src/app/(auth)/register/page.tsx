@@ -7,10 +7,11 @@ import { Building2, User, Mail, Lock, ShieldCheck, ArrowRight, AlertCircle, Load
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 export default function RegisterPage() {
   const router = useRouter();
+  const { register } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,26 +26,13 @@ export default function RegisterPage() {
     setError(null);
 
     try {
-      const res = await apiClient<{ user: any; company: any; accessToken: string }>(
-        "/auth/register",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            name,
-            email,
-            password,
-            companyName,
-            currency
-          })
-        }
-      );
-
-      if (typeof window !== "undefined") {
-        localStorage.setItem("accessToken", res.data.accessToken);
-        localStorage.setItem("activeCompanyId", res.data.company.id);
-      }
-
-      router.push("/");
+      await register({
+        name,
+        email,
+        password,
+        companyName,
+        currency
+      });
     } catch (err: any) {
       setError(err.message || "Registration failed. Please check your details.");
     } finally {

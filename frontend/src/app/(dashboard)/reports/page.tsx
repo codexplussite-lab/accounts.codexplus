@@ -27,7 +27,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { apiClient } from "@/lib/api";
+import { apiClient, apiDownload } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 type ReportType =
   | "trial-balance"
@@ -43,6 +44,7 @@ function ReportsDashboardContent() {
   const searchParams = useSearchParams();
   const initialTab = (searchParams?.get("tab") as ReportType) || "trial-balance";
 
+  const { status, activeCompany } = useAuth();
   const [activeTab, setActiveTab] = useState<ReportType>(initialTab);
   const [loading, setLoading] = useState(true);
   const [exporting, setExporting] = useState<"pdf" | "excel" | null>(null);
@@ -62,6 +64,7 @@ function ReportsDashboardContent() {
   // Load account list for General Ledger selector
   useEffect(() => {
     async function loadAccounts() {
+      if (status !== "AUTHENTICATED") return;
       try {
         const res = await apiClient<any[]>("/accounts");
         setAccounts(res.data);
@@ -69,19 +72,16 @@ function ReportsDashboardContent() {
           setSelectedAccountId(res.data[0].id);
         }
       } catch {
-        // Fallback demo accounts
-        setAccounts([
-          { id: "a1", code: "1001", name: "Cash on Hand", type: "ASSET" },
-          { id: "a2", code: "1100", name: "Accounts Receivable", type: "ASSET" },
-          { id: "a3", code: "4001", name: "Sales Revenue", type: "INCOME" }
-        ]);
-        setSelectedAccountId("a1");
+        setAccounts([]);
       }
     }
-    loadAccounts();
-  }, []);
+    if (status === "AUTHENTICATED") {
+      loadAccounts();
+    }
+  }, [status, activeCompany?.id]);
 
   const fetchReport = async () => {
+    if (status !== "AUTHENTICATED") return;
     setLoading(true);
     try {
       let endpoint = "";
@@ -130,7 +130,6 @@ function ReportsDashboardContent() {
       const res = await apiClient(endpoint, { params });
       setReportData(res.data);
     } catch {
-      // Demo fallback data
       setReportData(null);
     } finally {
       setLoading(false);
@@ -138,46 +137,28 @@ function ReportsDashboardContent() {
   };
 
   useEffect(() => {
+    if (status !== "AUTHENTICATED") return;
     if (activeTab === "general-ledger" && !selectedAccountId && accounts.length > 0) {
       setSelectedAccountId(accounts[0].id);
       return;
     }
     fetchReport();
-  }, [activeTab, asOfDate, startDate, endDate, selectedAccountId]);
+  }, [status, activeCompany?.id, activeTab, asOfDate, startDate, endDate, selectedAccountId]);
 
   const handleExport = async (format: "pdf" | "excel") => {
     setExporting(format);
     try {
-      const token = typeof window !== "undefined" ? localStorage.getItem("accessToken") : "";
-      const companyId = typeof window !== "undefined" ? localStorage.getItem("activeCompanyId") : "";
-
-      const queryParams = new URLSearchParams({
-        reportType: activeTab,
-        format,
-        ...(activeTab === "general-ledger" ? { accountId: selectedAccountId } : {}),
-        asOfDate,
-        startDate,
-        endDate
-      });
-
-      const url = `http://localhost:4000/api/reports/export?${queryParams.toString()}`;
-      const response = await fetch(url, {
-        headers: {
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-          ...(companyId ? { "X-Company-Id": companyId } : {})
+      const filename = `${activeTab}-${new Date().toISOString().split("T")[0]}.${format === "excel" ? "xlsx" : "pdf"}`;
+      await apiDownload("/reports/export", filename, {
+        params: {
+          reportType: activeTab,
+          format,
+          ...(activeTab === "general-ledger" ? { accountId: selectedAccountId } : {}),
+          asOfDate,
+          startDate,
+          endDate
         }
       });
-
-      if (!response.ok) throw new Error("Export failed");
-
-      const blob = await response.blob();
-      const downloadUrl = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = downloadUrl;
-      a.download = `${activeTab}-${new Date().toISOString().split("T")[0]}.${format === "excel" ? "xlsx" : "pdf"}`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
     } catch (err: any) {
       alert(err.message || "Failed to download export");
     } finally {

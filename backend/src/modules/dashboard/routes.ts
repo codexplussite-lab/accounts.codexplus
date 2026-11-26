@@ -12,3 +12,4 @@ router.use(companyScope);
 router.get("/overview", DashboardController.getOverview);
 
 export default router;
+

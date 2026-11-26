@@ -69,7 +69,15 @@ let alertWorker: Worker | null = null;
 
 if (env.REDIS_URL && env.NODE_ENV !== "test") {
   try {
-    const connection = new Redis(env.REDIS_URL, { maxRetriesPerRequest: null });
+    const connection = new Redis(env.REDIS_URL, {
+      maxRetriesPerRequest: null,
+      retryStrategy: () => null, // stop retrying if Redis is not running locally
+      enableOfflineQueue: false
+    });
+
+    connection.on("error", (err) => {
+      logger.warn({ error: err.message }, "Redis connection unavailable. In-memory queue will be used.");
+    });
 
     alertQueue = new Queue("stock-alerts", { connection });
 
@@ -88,6 +96,10 @@ if (env.REDIS_URL && env.NODE_ENV !== "test") {
 
     alertWorker.on("failed", (job, err) => {
       logger.error({ jobId: job?.id, error: err.message }, "Stock alerts job failed");
+    });
+
+    alertWorker.on("error", (err) => {
+      logger.warn({ error: err.message }, "Worker encountered connection issue.");
     });
   } catch (err: any) {
     logger.warn({ error: err.message }, "Redis connection failed. Running in-memory alert fallback.");
