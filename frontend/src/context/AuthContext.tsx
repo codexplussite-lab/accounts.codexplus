@@ -66,8 +66,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     let token = getAuthToken();
 
-    // If no token in memory/storage, attempt cookie-based silent refresh
-    if (!token) {
+    // Only attempt cookie-based silent refresh if the client previously had an active session
+    const hasSessionHint =
+      typeof window !== "undefined" && localStorage.getItem("erp_has_session") === "1";
+
+    if (!token && hasSessionHint) {
       token = await refreshAccessToken();
     }
 

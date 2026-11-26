@@ -57,6 +57,7 @@ export function setAuthToken(token: string | null) {
   if (typeof window !== "undefined") {
     if (token) {
       localStorage.setItem("accessToken", token);
+      localStorage.setItem("erp_has_session", "1");
     } else {
       localStorage.removeItem("accessToken");
     }
@@ -101,6 +102,7 @@ export function clearSession() {
   setActiveCompanyId(null);
   if (typeof window !== "undefined") {
     localStorage.removeItem("user");
+    localStorage.removeItem("erp_has_session");
   }
   if (onAuthFailedListener) {
     onAuthFailedListener();
@@ -312,7 +314,7 @@ export async function apiDownload(
 }
 
 /**
- * Health check helper querying the backend root health endpoint
+ * Health check helper querying the backend /api/health endpoint
  */
 export async function checkBackendHealth(): Promise<{
   status: string;
@@ -321,8 +323,8 @@ export async function checkBackendHealth(): Promise<{
   environment: string;
   uptime?: number;
 }> {
-  const baseOrigin = API_BASE.replace(/\/api\/?$/, "");
-  const response = await fetch(`${baseOrigin}/health`, {
+  const apiBase = API_BASE.replace(/\/+$/, "");
+  const response = await fetch(`${apiBase}/health`, {
     cache: "no-store"
   });
   if (!response.ok) {

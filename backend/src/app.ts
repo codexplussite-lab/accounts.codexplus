@@ -81,8 +81,8 @@ if (env.NODE_ENV !== "test") {
   });
 }
 
-// Health Check Endpoint (Section 8 Acceptance Criteria with Database Health)
-app.get("/health", async (_req: Request, res: Response) => {
+// Health Check Endpoint (mounted at both /health and /api/health for reverse-proxy compatibility)
+const healthHandler = async (_req: Request, res: Response) => {
   let dbStatus = "connected";
   try {
     if (prisma && typeof (prisma as any).$queryRaw === "function") {
@@ -103,7 +103,10 @@ app.get("/health", async (_req: Request, res: Response) => {
     environment: env.NODE_ENV,
     uptime: Math.floor(process.uptime())
   });
-});
+};
+
+app.get("/health", healthHandler);
+app.get("/api/health", healthHandler);
 
 // Mount Phase 1 Modules
 app.use("/api/auth", authRouter);
