@@ -24,7 +24,9 @@ import {
   CalendarClock,
   UserCheck,
   Database,
-  LogOut
+  LogOut,
+  Menu,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { checkBackendHealth } from "@/lib/api";
@@ -56,9 +58,15 @@ const NAV_ITEMS: NavItem[] = [
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { user, activeCompany, companies, switchCompany, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [health, setHealth] = useState<{ status: string; database?: string; timestamp: string; environment: string } | null>(null);
   const [loadingHealth, setLoadingHealth] = useState(true);
   const pathname = usePathname();
+
+  // Close mobile drawer on route navigation
+  useEffect(() => {
+    setMobileOpen(false);
+  }, [pathname]);
 
   const verifyHealth = async () => {
     setLoadingHealth(true);
@@ -94,11 +102,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen bg-canvas text-ink-primary">
-      {/* Left Navigation Rail */}
+      {/* Mobile Backdrop */}
+      {mobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-[1px] md:hidden"
+          onClick={() => setMobileOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Left Navigation Rail (Slide-over drawer on mobile, fixed rail on desktop) */}
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-surface transition-all duration-200 ease-in-out",
-          collapsed ? "w-16" : "w-60"
+          mobileOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0",
+          collapsed ? "md:w-16" : "md:w-60"
         )}
       >
         {/* Company Switcher Header */}
@@ -134,10 +152,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="flex h-6 w-6 items-center justify-center rounded text-ink-secondary hover:bg-canvas hover:text-ink-primary transition-colors ml-1"
+            className="hidden md:flex h-6 w-6 items-center justify-center rounded text-ink-secondary hover:bg-canvas hover:text-ink-primary transition-colors ml-1"
             title={collapsed ? "Expand rail" : "Collapse rail"}
           >
             {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+          </button>
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="flex md:hidden h-7 w-7 items-center justify-center rounded text-ink-secondary hover:bg-canvas hover:text-ink-primary transition-colors ml-1"
+            aria-label="Close navigation menu"
+          >
+            <X className="h-4 w-4" />
           </button>
         </div>
 
@@ -197,23 +222,30 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <div className={cn("flex flex-1 flex-col transition-all duration-200", collapsed ? "pl-16" : "pl-60")}>
+      <div className={cn("flex flex-1 flex-col min-w-0 transition-all duration-200 pl-0", collapsed ? "md:pl-16" : "md:pl-60")}>
         {/* Sticky Top Header */}
-        <header className="sticky top-0 z-40 flex h-14 items-center justify-between border-b border-border bg-surface px-6">
-          <div className="flex items-center space-x-2 text-xs">
-            <span className="text-ink-secondary">{activeCompany?.name || "Acme Enterprise"}</span>
-            <span className="text-border">/</span>
-            <span className="font-medium text-ink-primary">
+        <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-surface px-4 sm:px-6 gap-3">
+          <div className="flex items-center space-x-2 text-xs min-w-0">
+            <button
+              onClick={() => setMobileOpen(true)}
+              className="flex md:hidden h-8 w-8 items-center justify-center rounded border border-border bg-canvas text-ink-primary hover:bg-surface mr-1 flex-shrink-0"
+              aria-label="Open navigation menu"
+            >
+              <Menu className="h-4 w-4" />
+            </button>
+            <span className="text-ink-secondary truncate hidden sm:inline">{activeCompany?.name || "Acme Enterprise"}</span>
+            <span className="text-border hidden sm:inline">/</span>
+            <span className="font-medium text-ink-primary truncate">
               {NAV_ITEMS.find((n) => n.href === pathname)?.label || "Workspace"}
             </span>
           </div>
 
           {/* Telemetry Status Bar */}
-          <div className="flex items-center space-x-3 text-xs">
-            <div className="flex items-center space-x-2 rounded border border-border bg-canvas px-2.5 py-1">
+          <div className="flex items-center space-x-3 text-xs flex-shrink-0">
+            <div className="flex items-center space-x-2 rounded border border-border bg-canvas px-2 sm:px-2.5 py-1">
               <span
                 className={cn(
-                  "h-2 w-2 rounded-full",
+                  "h-2 w-2 rounded-full flex-shrink-0",
                   loadingHealth
                     ? "bg-amber-400 animate-pulse"
                     : health?.status === "ok"
@@ -222,17 +254,21 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               />
               <span className="font-mono text-[11px] text-ink-secondary">
-                Backend:{" "}
+                <span className="hidden sm:inline">Backend: </span>
                 {loadingHealth
                   ? "Probing..."
                   : health?.status === "ok"
-                  ? `Online (4000)${health?.database === "connected" ? " · DB Connected" : ""}`
+                  ? "Online"
                   : "Offline"}
+                {health?.status === "ok" && health?.database === "connected" && (
+                  <span className="hidden lg:inline"> · DB Connected</span>
+                )}
               </span>
               <button
                 onClick={verifyHealth}
                 className="text-ink-secondary hover:text-ink-primary transition-colors ml-1"
                 title="Refresh Backend Telemetry"
+                aria-label="Refresh Backend Telemetry"
               >
                 <RefreshCw className={cn("h-3 w-3", loadingHealth && "animate-spin")} />
               </button>
@@ -241,7 +277,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Dynamic Page Content */}
-        <main className="flex-1 p-6">{children}</main>
+        <main className="flex-1 p-4 sm:p-6 min-w-0 overflow-x-hidden">{children}</main>
       </div>
     </div>
   );
