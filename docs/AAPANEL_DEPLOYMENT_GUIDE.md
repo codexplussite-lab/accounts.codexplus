@@ -1,132 +1,98 @@
-# aaPanel Production Deployment & CI/CD Pipeline Guide
+# aaPanel Production Deployment & CI/CD Pipeline Guide (`accounts.codexplus.site`)
 
-This guide provides step-by-step instructions for deploying the **Enterprise Accounting & Inventory ERP** to an **aaPanel** Linux server using **Node.js Project Manager / PM2**, **Nginx**, and setting up automated CI/CD webhooks.
-
----
-
-## 1. System Requirements & aaPanel Setup
-
-### aaPanel Software Store Requirements
-Ensure the following packages are installed from aaPanel's App Store:
-1. **Nginx** (1.22+ or 1.24+)
-2. **Node.js Version Manager** (or PM2 Manager)
-   - Install **Node.js v20.x LTS**
-   - In Node.js Version Manager, install global packages: `pnpm`, `pm2`, `typescript`
-3. **PostgreSQL Manager** (or use managed PostgreSQL / Neon DB)
-4. **Webhook** (Optional, for auto-deployment on git push)
+This guide provides exact step-by-step instructions for deploying the **Enterprise Accounting & Inventory ERP** to **aaPanel** using **MySQL (`accounts_codexplus`)**, **PM2**, **Nginx**, and automated GitHub Webhooks.
 
 ---
 
-## 2. Directory Structure on aaPanel
+## 1. aaPanel App Store Requirements
+Ensure these packages are installed in aaPanel:
+1. **Nginx** (1.22+)
+2. **MySQL** (8.0+ or 5.7+)
+3. **Node.js Version Manager** (Install **Node.js v20.x LTS**)
+4. **PM2 Manager**
+5. **Webhook** (for automated Git push deployment)
 
-Clone or extract the repository under your website root (e.g. `/www/wwwroot/accounts.codexplus`):
+---
 
-```text
-/www/wwwroot/accounts.codexplus/
-├── backend/            # Express REST API (Port 4000)
-├── frontend/           # Next.js Web App (Port 3000)
-├── docs/               # Documentation & Reports
-├── ecosystem.config.cjs # PM2 ecosystem file
-└── .github/workflows/  # CI/CD workflows
+## 2. Database Setup (MySQL)
+In aaPanel -> **Databases** -> Add Database:
+- **Database Name:** `accounts_codexplus`
+- **Username:** `accounts_codexplus`
+- **Password:** `<your-mysql-password>`
+- **Access Permission:** `Localhost (127.0.0.1)`
+
+---
+
+## 3. Clone Repository on aaPanel
+Open aaPanel Terminal and clone into `/www/wwwroot/accounts.codexplus.site`:
+
+```bash
+cd /www/wwwroot
+git clone https://github.com/codexplussite-lab/accounts.codexplus.git accounts.codexplus.site
+cd /www/wwwroot/accounts.codexplus.site
 ```
 
 ---
 
-## 3. Environment Variables Configuration
+## 4. Environment Variables Configuration
 
 ### A. Backend (`backend/.env`)
-Create `/www/wwwroot/accounts.codexplus/backend/.env`:
+Create `/www/wwwroot/accounts.codexplus.site/backend/.env`:
 ```env
 NODE_ENV=production
 PORT=4000
-DATABASE_URL="postgresql://USER:PASSWORD@HOST:5432/neondb?sslmode=require"
-DIRECT_URL="postgresql://USER:PASSWORD@HOST:5432/neondb?sslmode=require"
+DATABASE_URL="mysql://accounts_codexplus:YOUR_MYSQL_PASSWORD@127.0.0.1:3306/accounts_codexplus"
 JWT_ACCESS_SECRET="GENERATE_A_64_CHAR_RANDOM_HEX_STRING"
 JWT_REFRESH_SECRET="GENERATE_A_SECOND_64_CHAR_RANDOM_HEX_STRING"
-CORS_ORIGIN="https://accounts.yourdomain.com"
+CORS_ORIGIN="https://accounts.codexplus.site"
 ```
 
 ### B. Frontend (`frontend/.env.local`)
-Create `/www/wwwroot/accounts.codexplus/frontend/.env.local`:
+Create `/www/wwwroot/accounts.codexplus.site/frontend/.env.local`:
 ```env
-NEXT_PUBLIC_API_URL="https://accounts.yourdomain.com/api"
+NEXT_PUBLIC_API_URL="https://accounts.codexplus.site/api"
 ```
 
 ---
 
-## 4. Initial Installation & Build
+## 5. Initial Installation, MySQL Schema Push & Build
 
-Open terminal in aaPanel and run:
+Run in aaPanel Terminal:
 
 ```bash
-cd /www/wwwroot/accounts.codexplus
-
-# 1. Install & Build Backend
-cd backend
+# 1. Backend Setup & MySQL Schema Push
+cd /www/wwwroot/accounts.codexplus.site/backend
 npm install
 npx prisma generate
-npx prisma migrate deploy
+npx prisma db push
 npm run build
 
-# 2. Install & Build Frontend
-cd ../frontend
+# 2. Frontend Setup & Production Build
+cd /www/wwwroot/accounts.codexplus.site/frontend
 npm install
 npm run build
 ```
 
 ---
 
-## 5. Starting Processes with PM2 (aaPanel)
-
-You can manage both services using the provided `ecosystem.config.cjs`:
+## 6. Start Services with PM2
 
 ```bash
-cd /www/wwwroot/accounts.codexplus
-
-# Start both services
+cd /www/wwwroot/accounts.codexplus.site
 pm2 start ecosystem.config.cjs
-
-# Save PM2 state to survive server reboots
 pm2 save
 pm2 startup
 ```
 
-Alternatively, in aaPanel **Node.js Project Manager**:
-1. Add Project 1:
-   - Name: `accounting-backend`
-   - Path: `/www/wwwroot/accounts.codexplus/backend`
-   - Run command: `npm run start` or `node dist/server.js`
-   - Port: `4000`
-2. Add Project 2:
-   - Name: `accounting-frontend`
-   - Path: `/www/wwwroot/accounts.codexplus/frontend`
-   - Run command: `npm run start`
-   - Port: `3000`
-
 ---
 
-## 6. aaPanel Nginx Reverse Proxy Configuration
+## 7. aaPanel Nginx Reverse Proxy (`accounts.codexplus.site`)
 
-In aaPanel -> **Website** -> Select your domain (e.g. `accounts.yourdomain.com`) -> **Config** / **Reverse Proxy**:
+In aaPanel -> **Website** -> Add Site (`accounts.codexplus.site`) -> **SSL** (Enable Let's Encrypt) -> **Config**:
 
-Edit your Nginx configuration to route traffic cleanly:
+Add these `location` blocks inside the `server { ... }` block:
 
 ```nginx
-server {
-    listen 80;
-    listen 443 ssl http2;
-    server_name accounts.yourdomain.com;
-
-    # SSL Configuration (configure via aaPanel SSL tab / Let's Encrypt)
-    # ssl_certificate ...
-    # ssl_certificate_key ...
-
-    # Security Headers
-    add_header X-Frame-Options "SAMEORIGIN" always;
-    add_header X-XSS-Protection "1; mode=block" always;
-    add_header X-Content-Type-Options "nosniff" always;
-    add_header Referrer-Policy "strict-origin-when-cross-origin" always;
-
     # Backend API Routing
     location /api/ {
         proxy_pass http://127.0.0.1:4000/api/;
@@ -160,48 +126,36 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_cache_bypass $http_upgrade;
     }
-}
 ```
 
 ---
 
-## 7. Automated Deployment Pipeline (aaPanel Webhook)
+## 8. Automated Deployment Pipeline (aaPanel Webhook)
 
-To automatically deploy every time you push code to GitHub:
-1. In aaPanel, install the **Webhook** app from App Store.
-2. Add a Webhook:
-   - Name: `deploy-accounting-erp`
-   - Shell Script:
-     ```bash
-     #!/bin/bash
-     echo "Starting Accounting ERP Deployment..."
-     cd /www/wwwroot/accounts.codexplus
+In aaPanel **Webhook** app, create a webhook with this script:
 
-     # Pull latest tested code
-     git pull origin main
+```bash
+#!/bin/bash
+echo "Starting Accounting ERP Deployment..."
+cd /www/wwwroot/accounts.codexplus.site
 
-     # Update Backend
-     cd backend
-     npm install --production=false
-     npx prisma generate
-     npx prisma migrate deploy
-     npm run build
+git pull origin main
 
-     # Update Frontend
-     cd ../frontend
-     npm install
-     npm run build
+# Update Backend & MySQL Schema
+cd backend
+npm install
+npx prisma generate
+npx prisma db push
+npm run build
 
-     # Restart Services via PM2
-     cd /www/wwwroot/accounts.codexplus
-     pm2 reload ecosystem.config.cjs --update-env
+# Update Frontend
+cd ../frontend
+npm install
+npm run build
 
-     echo "Deployment completed successfully at $(date)!"
-     ```
-3. Copy the generated Webhook URL from aaPanel.
-4. In GitHub -> Repository -> **Settings** -> **Webhooks** -> **Add webhook**:
-   - Payload URL: Paste the aaPanel Webhook URL
-   - Content type: `application/json`
-   - Which events: `Just the push event`
-   - Active: checked
-5. Click **Add webhook**. Now every git push automatically pulls, migrates, builds, and reloads PM2 with zero downtime!
+# Zero-downtime reload
+cd /www/wwwroot/accounts.codexplus.site
+pm2 reload ecosystem.config.cjs --update-env
+
+echo "Deployment completed at $(date)!"
+```

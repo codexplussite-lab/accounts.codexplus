@@ -30,11 +30,16 @@ import { prisma } from "./config/prisma.js";
 
 export const app = express();
 
+// Trust Nginx reverse proxy (aaPanel / production)
+app.set("trust proxy", 1);
+
 // Security Middleware
 app.use(helmet());
 
 const allowedOrigins = [
   env.CORS_ORIGIN,
+  "https://accounts.codexplus.site",
+  "http://accounts.codexplus.site",
   "http://localhost:3000",
   "http://127.0.0.1:3000"
 ].filter(Boolean);

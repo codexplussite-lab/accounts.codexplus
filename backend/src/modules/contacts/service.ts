@@ -101,10 +101,10 @@ export class ContactService {
     if (isActive !== undefined) where.isActive = isActive;
     if (search) {
       where.OR = [
-        { name: { contains: search, mode: "insensitive" } },
-        { phone: { contains: search, mode: "insensitive" } },
-        { email: { contains: search, mode: "insensitive" } },
-        { ntn: { contains: search, mode: "insensitive" } }
+        { name: { contains: search } },
+        { phone: { contains: search } },
+        { email: { contains: search } },
+        { ntn: { contains: search } }
       ];
     }
 

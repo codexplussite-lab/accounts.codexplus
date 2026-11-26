@@ -38,7 +38,13 @@ export interface RequestOptions extends RequestInit {
   _retry?: boolean;
 }
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000/api";
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL ||
+  (typeof window !== "undefined" &&
+  window.location.hostname !== "localhost" &&
+  window.location.hostname !== "127.0.0.1"
+    ? `${window.location.origin}/api`
+    : "http://localhost:4000/api");
 
 // In-memory token store for performance & safety
 let inMemoryAccessToken: string | null = null;

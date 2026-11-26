@@ -65,8 +65,8 @@ export class PurchaseService {
     if (status) where.status = status;
     if (search) {
       where.OR = [
-        { number: { contains: search, mode: "insensitive" } },
-        { vendorBillNo: { contains: search, mode: "insensitive" } }
+        { number: { contains: search } },
+        { vendorBillNo: { contains: search } }
       ];
     }
 

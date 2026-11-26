@@ -72,8 +72,8 @@ export class SalesService {
     if (status) where.status = status;
     if (search) {
       where.OR = [
-        { number: { contains: search, mode: "insensitive" } },
-        { notes: { contains: search, mode: "insensitive" } }
+        { number: { contains: search } },
+        { notes: { contains: search } }
       ];
     }
 
