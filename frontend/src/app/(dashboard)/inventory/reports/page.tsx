@@ -21,6 +21,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface ValuationSummary {
   totalInventoryValuation: string;
@@ -61,6 +62,7 @@ interface LowStockAlert {
 }
 
 export default function InventoryReportsPage() {
+  const { status, activeCompany } = useAuth();
   const [activeTab, setActiveTab] = useState<"VALUATION" | "WAREHOUSES" | "ALERTS">("VALUATION");
   const [loading, setLoading] = useState(true);
 
@@ -142,8 +144,10 @@ export default function InventoryReportsPage() {
   };
 
   useEffect(() => {
-    fetchReports();
-  }, []);
+    if (status === "AUTHENTICATED") {
+      fetchReports();
+    }
+  }, [status, activeCompany?.id]);
 
   return (
     <AppShell>

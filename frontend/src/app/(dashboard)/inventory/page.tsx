@@ -25,6 +25,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface Product {
   id: string;
@@ -49,6 +50,7 @@ interface Category {
 }
 
 export default function InventoryPage() {
+  const { status, activeCompany } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,8 +148,10 @@ export default function InventoryPage() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, [statusFilter, categoryFilter]);
+    if (status === "AUTHENTICATED") {
+      fetchData();
+    }
+  }, [status, activeCompany?.id, statusFilter, categoryFilter]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();

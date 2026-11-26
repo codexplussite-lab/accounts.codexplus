@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface Product {
   id: string;
@@ -39,6 +40,7 @@ interface Warehouse {
 
 export default function StockAdjustmentsPage() {
   const router = useRouter();
+  const { status, activeCompany } = useAuth();
   const [products, setProducts] = useState<Product[]>([]);
   const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,6 +58,7 @@ export default function StockAdjustmentsPage() {
   const [success, setSuccess] = useState<string | null>(null);
 
   useEffect(() => {
+    if (status !== "AUTHENTICATED") return;
     async function loadData() {
       setLoading(true);
       try {
@@ -98,7 +101,7 @@ export default function StockAdjustmentsPage() {
       }
     }
     loadData();
-  }, []);
+  }, [status, activeCompany?.id]);
 
   const selectedProduct = products.find((p) => p.id === productId);
   const qtyNum = parseFloat(quantity || "0");

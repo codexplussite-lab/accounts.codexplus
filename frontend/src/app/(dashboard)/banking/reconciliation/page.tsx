@@ -19,7 +19,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { AppShell } from "@/components/layout/AppShell";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface BankAccount {
   id: string;
@@ -69,6 +71,7 @@ interface ReconciliationData {
 }
 
 export default function BankReconciliationPage() {
+  const { status, activeCompany } = useAuth();
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [selectedAccountId, setSelectedAccountId] = useState<string>("");
   const [reconData, setReconData] = useState<ReconciliationData | null>(null);
@@ -88,14 +91,17 @@ export default function BankReconciliationPage() {
 
   const fetchBankAccounts = async () => {
     try {
-      const res = await apiClient<BankAccount[]>("banking/accounts");
+      const res = await apiClient<BankAccount[]>("/banking/accounts");
       const list = res.data || [];
       setBankAccounts(list);
       if (list.length > 0 && !selectedAccountId) {
         setSelectedAccountId(list[0].id);
+      } else if (list.length === 0) {
+        setLoading(false);
       }
     } catch (err: any) {
       setErrorMsg(err.message || "Failed to load bank accounts.");
+      setLoading(false);
     }
   };
 
@@ -114,14 +120,16 @@ export default function BankReconciliationPage() {
   };
 
   useEffect(() => {
-    fetchBankAccounts();
-  }, []);
+    if (status === "AUTHENTICATED") {
+      fetchBankAccounts();
+    }
+  }, [status, activeCompany?.id]);
 
   useEffect(() => {
-    if (selectedAccountId) {
+    if (status === "AUTHENTICATED" && selectedAccountId) {
       fetchReconciliation(selectedAccountId);
     }
-  }, [selectedAccountId]);
+  }, [status, activeCompany?.id, selectedAccountId]);
 
   const handleImportStatement = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -204,7 +212,8 @@ export default function BankReconciliationPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <AppShell>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5">
         <div>
@@ -577,6 +586,7 @@ export default function BankReconciliationPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AppShell>
   );
 }

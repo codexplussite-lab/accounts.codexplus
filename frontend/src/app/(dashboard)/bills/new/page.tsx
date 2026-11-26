@@ -13,6 +13,8 @@ import { useAuth } from "@/context/AuthContext";
 
 interface BillLineItem {
   id: string;
+  productId: string;
+  accountId: string;
   description: string;
   quantity: string;
   unitCost: string;
@@ -25,6 +27,8 @@ export default function NewBillPage() {
 
   const [vendors, setVendors] = useState<any[]>([]);
   const [taxes, setTaxes] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
+  const [expenseAccounts, setExpenseAccounts] = useState<any[]>([]);
   const [loadingLookups, setLoadingLookups] = useState(true);
 
   const [contactId, setContactId] = useState("");
@@ -33,7 +37,7 @@ export default function NewBillPage() {
   const [dueDate, setDueDate] = useState("");
 
   const [items, setItems] = useState<BillLineItem[]>([
-    { id: "1", description: "", quantity: "1", unitCost: "0.00", taxRateId: "" }
+    { id: "1", productId: "", accountId: "", description: "", quantity: "1", unitCost: "0.00", taxRateId: "" }
   ]);
 
   const [saving, setSaving] = useState(false);
@@ -46,20 +50,44 @@ export default function NewBillPage() {
       setLoadingLookups(true);
 
       try {
-        const [vRes, tRes] = await Promise.all([
+        const [vRes, tRes, pRes, aRes] = await Promise.all([
           apiClient<any[]>("/contacts", {
             params: { type: "VENDOR" }
           }),
-          apiClient<any[]>("/taxes")
+          apiClient<any[]>("/taxes"),
+          apiClient<any[]>("/inventory/products").catch(() => ({ data: [] })),
+          apiClient<any[]>("/accounts").catch(() => ({ data: [] }))
         ]);
 
         setVendors(vRes.data || []);
         if (vRes.data && vRes.data.length > 0) setContactId(vRes.data[0].id);
         setTaxes(tRes.data || []);
+        const prods = pRes.data || [];
+        setProducts(prods);
+        const expAccs = (aRes.data || []).filter((a: any) => a.type === "EXPENSE" || a.type === "ASSET");
+        setExpenseAccounts(expAccs);
+
+        // Pre-populate default target on first row if available
+        if (prods.length > 0) {
+          setItems((prev) =>
+            prev.map((it, i) =>
+              i === 0 && !it.productId && !it.accountId
+                ? { ...it, productId: prods[0].id, description: prods[0].name, unitCost: prods[0].costPrice || "0.00" }
+                : it
+            )
+          );
+        } else if (expAccs.length > 0) {
+          setItems((prev) =>
+            prev.map((it, i) =>
+              i === 0 && !it.productId && !it.accountId
+                ? { ...it, accountId: expAccs[0].id, description: expAccs[0].name }
+                : it
+            )
+          );
+        }
       } catch {
-        setVendors([{ id: "vend-1", name: "Prime Materials Ltd" }]);
-        setContactId("vend-1");
-        setTaxes([{ id: "tax-1", name: "GST 18%", percentage: "18.00" }]);
+        setVendors([]);
+        setTaxes([]);
       } finally {
         setLoadingLookups(false);
       }
@@ -71,7 +99,15 @@ export default function NewBillPage() {
   const addItem = () => {
     setItems([
       ...items,
-      { id: String(Date.now()), description: "", quantity: "1", unitCost: "0.00", taxRateId: taxes[0]?.id || "" }
+      {
+        id: String(Date.now()),
+        productId: products[0]?.id || "",
+        accountId: !products[0] && expenseAccounts[0] ? expenseAccounts[0].id : "",
+        description: products[0]?.name || "",
+        quantity: "1",
+        unitCost: products[0]?.costPrice || "0.00",
+        taxRateId: taxes[0]?.id || ""
+      }
     ]);
   };
 
@@ -83,6 +119,32 @@ export default function NewBillPage() {
   const updateItem = (index: number, field: keyof BillLineItem, val: string) => {
     const updated = [...items];
     updated[index][field] = val;
+    setItems(updated);
+  };
+
+  const handleTargetChange = (index: number, combinedValue: string) => {
+    const updated = [...items];
+    if (combinedValue.startsWith("product:")) {
+      const pid = combinedValue.replace("product:", "");
+      const prod = products.find((p) => p.id === pid);
+      updated[index].productId = pid;
+      updated[index].accountId = "";
+      if (prod) {
+        updated[index].description = prod.name;
+        updated[index].unitCost = prod.costPrice || "0.00";
+      }
+    } else if (combinedValue.startsWith("account:")) {
+      const aid = combinedValue.replace("account:", "");
+      const acc = expenseAccounts.find((a) => a.id === aid);
+      updated[index].accountId = aid;
+      updated[index].productId = "";
+      if (acc && !updated[index].description) {
+        updated[index].description = acc.name;
+      }
+    } else {
+      updated[index].productId = "";
+      updated[index].accountId = "";
+    }
     setItems(updated);
   };
 
@@ -114,6 +176,12 @@ export default function NewBillPage() {
       return;
     }
 
+    const invalidRow = items.find((it) => !it.productId && !it.accountId);
+    if (invalidRow) {
+      setError("Please select a Product or Expense Account for every bill line item.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
@@ -126,9 +194,11 @@ export default function NewBillPage() {
           date,
           dueDate: dueDate || null,
           items: items.map((it) => ({
+            productId: it.productId || null,
+            accountId: it.accountId || null,
             description: it.description || "Purchase Item",
-            quantity: it.quantity,
-            unitCost: it.unitCost,
+            quantity: it.quantity || "1",
+            unitCost: it.unitCost || "0.00",
             taxRateId: it.taxRateId || null
           }))
         })
@@ -264,7 +334,8 @@ export default function NewBillPage() {
             <table className="w-full text-left text-xs">
               <thead className="bg-canvas border-b border-border text-[11px] font-semibold text-ink-secondary uppercase tracking-wider">
                 <tr>
-                  <th className="py-2.5 px-3">Item / Description</th>
+                  <th className="py-2.5 px-3 w-56">Product / Expense Account *</th>
+                  <th className="py-2.5 px-3">Description</th>
                   <th className="py-2.5 px-3 w-28 text-right">Qty</th>
                   <th className="py-2.5 px-3 w-36 text-right">Unit Cost</th>
                   <th className="py-2.5 px-3 w-40">Tax Rate</th>
@@ -283,9 +354,42 @@ export default function NewBillPage() {
                     if (match) t = taxable * (parseFloat(match.percentage) / 100);
                   }
                   const rowTotal = taxable + t;
+                  const selectedTarget = item.productId
+                    ? `product:${item.productId}`
+                    : item.accountId
+                    ? `account:${item.accountId}`
+                    : "";
 
                   return (
                     <tr key={item.id} className="hover:bg-canvas/40 transition-colors">
+                      <td className="py-2 px-3">
+                        <select
+                          value={selectedTarget}
+                          onChange={(e) => handleTargetChange(idx, e.target.value)}
+                          className="w-full h-8 px-2 text-xs bg-white border border-border rounded focus:outline-none"
+                          required
+                        >
+                          <option value="">-- Select Product / Account --</option>
+                          {products.length > 0 && (
+                            <optgroup label="Inventory Products">
+                              {products.map((p) => (
+                                <option key={p.id} value={`product:${p.id}`}>
+                                  {p.sku} - {p.name}
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                          {expenseAccounts.length > 0 && (
+                            <optgroup label="Expense / Asset Accounts">
+                              {expenseAccounts.map((a) => (
+                                <option key={a.id} value={`account:${a.id}`}>
+                                  {a.code} - {a.name}
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
+                        </select>
+                      </td>
                       <td className="py-2 px-3">
                         <Input
                           placeholder="Item or service description..."

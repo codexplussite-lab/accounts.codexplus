@@ -25,6 +25,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface RecurringProfile {
   id: string;
@@ -46,6 +47,7 @@ interface RecurringProfile {
 }
 
 export default function RecurringInvoicesPage() {
+  const { status, activeCompany } = useAuth();
   const [profiles, setProfiles] = useState<RecurringProfile[]>([]);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
@@ -85,9 +87,11 @@ export default function RecurringInvoicesPage() {
   };
 
   useEffect(() => {
-    fetchProfiles();
-    fetchContacts();
-  }, []);
+    if (status === "AUTHENTICATED") {
+      fetchProfiles();
+      fetchContacts();
+    }
+  }, [status, activeCompany?.id]);
 
   const handleGenerateDue = async () => {
     setGenerating(true);

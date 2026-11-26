@@ -13,6 +13,7 @@ import { useAuth } from "@/context/AuthContext";
 
 interface LineItem {
   id: string;
+  productId: string;
   description: string;
   quantity: string;
   unitPrice: string;
@@ -26,6 +27,7 @@ export default function NewInvoicePage() {
 
   const [customers, setCustomers] = useState<any[]>([]);
   const [taxes, setTaxes] = useState<any[]>([]);
+  const [products, setProducts] = useState<any[]>([]);
   const [loadingLookups, setLoadingLookups] = useState(true);
 
   const [contactId, setContactId] = useState("");
@@ -34,7 +36,7 @@ export default function NewInvoicePage() {
   const [notes, setNotes] = useState("");
 
   const [items, setItems] = useState<LineItem[]>([
-    { id: "1", description: "", quantity: "1", unitPrice: "0.00", discount: "0.00", taxRateId: "" }
+    { id: "1", productId: "", description: "", quantity: "1", unitPrice: "0.00", discount: "0.00", taxRateId: "" }
   ]);
 
   const [saving, setSaving] = useState(false);
@@ -47,21 +49,21 @@ export default function NewInvoicePage() {
       setLoadingLookups(true);
 
       try {
-        const [cRes, tRes] = await Promise.all([
+        const [cRes, tRes, pRes] = await Promise.all([
           apiClient<any[]>("/contacts", {
             params: { type: "CUSTOMER" }
           }),
-          apiClient<any[]>("/taxes")
+          apiClient<any[]>("/taxes"),
+          apiClient<any[]>("/inventory/products").catch(() => ({ data: [] }))
         ]);
 
         setCustomers(cRes.data || []);
         if (cRes.data && cRes.data.length > 0) setContactId(cRes.data[0].id);
         setTaxes(tRes.data || []);
+        setProducts(pRes.data || []);
       } catch {
-        // Fallback for presentation
-        setCustomers([{ id: "cust-1", name: "Apex Global Traders" }]);
-        setContactId("cust-1");
-        setTaxes([{ id: "tax-1", name: "GST 18%", percentage: "18.00" }]);
+        setCustomers([]);
+        setTaxes([]);
       } finally {
         setLoadingLookups(false);
       }
@@ -73,7 +75,7 @@ export default function NewInvoicePage() {
   const addItem = () => {
     setItems([
       ...items,
-      { id: String(Date.now()), description: "", quantity: "1", unitPrice: "0.00", discount: "0.00", taxRateId: taxes[0]?.id || "" }
+      { id: String(Date.now()), productId: "", description: "", quantity: "1", unitPrice: "0.00", discount: "0.00", taxRateId: taxes[0]?.id || "" }
     ]);
   };
 
@@ -85,6 +87,19 @@ export default function NewInvoicePage() {
   const updateItem = (index: number, field: keyof LineItem, val: string) => {
     const updated = [...items];
     updated[index][field] = val;
+    setItems(updated);
+  };
+
+  const handleProductSelect = (index: number, pid: string) => {
+    const updated = [...items];
+    updated[index].productId = pid;
+    if (pid) {
+      const prod = products.find((p) => p.id === pid);
+      if (prod) {
+        updated[index].description = prod.name;
+        updated[index].unitPrice = prod.salePrice || "0.00";
+      }
+    }
     setItems(updated);
   };
 
@@ -130,9 +145,10 @@ export default function NewInvoicePage() {
           dueDate: dueDate || null,
           notes: notes || null,
           items: items.map((it) => ({
+            productId: it.productId || null,
             description: it.description || "Invoice Line Item",
-            quantity: it.quantity,
-            unitPrice: it.unitPrice,
+            quantity: it.quantity || "1",
+            unitPrice: it.unitPrice || "0.00",
             discount: it.discount || "0.00",
             taxRateId: it.taxRateId || null
           }))
@@ -270,7 +286,8 @@ export default function NewInvoicePage() {
             <table className="w-full text-left text-xs">
               <thead className="bg-canvas border-b border-border text-[11px] font-semibold text-ink-secondary uppercase tracking-wider">
                 <tr>
-                  <th className="py-2.5 px-3">Item / Description</th>
+                  <th className="py-2.5 px-3 w-48">Product (Optional)</th>
+                  <th className="py-2.5 px-3">Description</th>
                   <th className="py-2.5 px-3 w-24 text-right">Qty</th>
                   <th className="py-2.5 px-3 w-32 text-right">Unit Price</th>
                   <th className="py-2.5 px-3 w-28 text-right">Discount</th>
@@ -294,6 +311,20 @@ export default function NewInvoicePage() {
 
                   return (
                     <tr key={item.id} className="hover:bg-canvas/40 transition-colors">
+                      <td className="py-2 px-3">
+                        <select
+                          value={item.productId}
+                          onChange={(e) => handleProductSelect(idx, e.target.value)}
+                          className="w-full h-8 px-2 text-xs bg-white border border-border rounded focus:outline-none"
+                        >
+                          <option value="">-- Custom Service --</option>
+                          {products.map((prod) => (
+                            <option key={prod.id} value={prod.id}>
+                              {prod.sku} - {prod.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
                       <td className="py-2 px-3">
                         <Input
                           placeholder="Product description..."

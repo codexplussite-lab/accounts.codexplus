@@ -18,7 +18,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { AppShell } from "@/components/layout/AppShell";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 type RoleType = "OWNER" | "ACCOUNTANT" | "CASHIER" | "AUDITOR";
 
@@ -36,6 +38,7 @@ interface Member {
 }
 
 export default function TeamManagementPage() {
+  const { status, activeCompany } = useAuth();
   const [members, setMembers] = useState<Member[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState(false);
@@ -63,8 +66,10 @@ export default function TeamManagementPage() {
   };
 
   useEffect(() => {
-    fetchMembers();
-  }, []);
+    if (status === "AUTHENTICATED") {
+      fetchMembers();
+    }
+  }, [status, activeCompany?.id]);
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,7 +147,8 @@ export default function TeamManagementPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <AppShell>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5">
         <div>
@@ -419,6 +425,7 @@ export default function TeamManagementPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AppShell>
   );
 }

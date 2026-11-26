@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface Product {
   id: string;
@@ -58,6 +59,7 @@ interface LedgerEntry {
 
 function StockLedgerContent() {
   const searchParams = useSearchParams();
+  const { status, activeCompany } = useAuth();
   const initialProductId = searchParams?.get("productId") || "";
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -74,6 +76,7 @@ function StockLedgerContent() {
 
   // Load initial product and warehouse lists
   useEffect(() => {
+    if (status !== "AUTHENTICATED") return;
     async function init() {
       try {
         const [prodRes, whRes] = await Promise.all([
@@ -105,7 +108,7 @@ function StockLedgerContent() {
       }
     }
     init();
-  }, [initialProductId]);
+  }, [status, activeCompany?.id, initialProductId]);
 
   // Load ledger whenever selected product or filters change
   const fetchLedger = async () => {
@@ -173,10 +176,10 @@ function StockLedgerContent() {
   };
 
   useEffect(() => {
-    if (selectedProductId) {
+    if (status === "AUTHENTICATED" && selectedProductId) {
       fetchLedger();
     }
-  }, [selectedProductId, selectedWarehouseId]);
+  }, [status, activeCompany?.id, selectedProductId, selectedWarehouseId]);
 
   return (
     <AppShell>

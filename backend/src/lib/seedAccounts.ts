@@ -40,8 +40,9 @@ export async function createDefaultAccountsAndWarehouse(
   companyId: string
 ): Promise<void> {
   // 1. Seed Default Accounts
+  let bankLedgerAccountId: string | null = null;
   for (const acc of DEFAULT_ACCOUNTS) {
-    await tx.account.create({
+    const createdAcc = await tx.account.create({
       data: {
         companyId,
         code: acc.code,
@@ -50,6 +51,21 @@ export async function createDefaultAccountsAndWarehouse(
         isSystem: acc.isSystem,
         systemKey: acc.systemKey,
         isActive: true
+      }
+    });
+    if (acc.systemKey === "BANK") {
+      bankLedgerAccountId = createdAcc.id;
+    }
+  }
+
+  // 1b. Seed Default Bank Account linked to 1002 Bank
+  if (bankLedgerAccountId) {
+    await tx.bankAccount.create({
+      data: {
+        companyId,
+        name: "Primary Bank Account",
+        accountId: bankLedgerAccountId,
+        accountNo: "0001-OPERATING"
       }
     });
   }

@@ -18,7 +18,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { AppShell } from "@/components/layout/AppShell";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface FiscalYear {
   id: string;
@@ -29,6 +31,7 @@ interface FiscalYear {
 }
 
 export default function FiscalSettingsPage() {
+  const { status, activeCompany } = useAuth();
   const [lockedUntil, setLockedUntil] = useState<string | null>(null);
   const [newLockDate, setNewLockDate] = useState("");
   const [fiscalYears, setFiscalYears] = useState<FiscalYear[]>([]);
@@ -70,8 +73,10 @@ export default function FiscalSettingsPage() {
   };
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    if (status === "AUTHENTICATED") {
+      fetchData();
+    }
+  }, [status, activeCompany?.id]);
 
   const handleSavePeriodLock = async (dateVal: string | null) => {
     setSavingLock(true);
@@ -159,7 +164,8 @@ export default function FiscalSettingsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <AppShell>
+      <div className="space-y-6">
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5">
         <div>
@@ -523,6 +529,7 @@ export default function FiscalSettingsPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AppShell>
   );
 }

@@ -19,7 +19,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { AppShell } from "@/components/layout/AppShell";
 import { apiClient } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 interface AuditLogItem {
   id: string;
@@ -36,6 +38,7 @@ interface AuditLogItem {
 }
 
 export default function AuditLogPage() {
+  const { status, activeCompany } = useAuth();
   const [logs, setLogs] = useState<AuditLogItem[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -51,6 +54,7 @@ export default function AuditLogPage() {
   const [selectedLog, setSelectedLog] = useState<AuditLogItem | null>(null);
 
   const fetchLogs = async () => {
+    if (status !== "AUTHENTICATED") return;
     setLoading(true);
     try {
       const params: any = { page, limit };
@@ -58,7 +62,7 @@ export default function AuditLogPage() {
       if (actionFilter) params.action = actionFilter;
       if (searchTerm) params.search = searchTerm;
 
-      const res = await apiClient<AuditLogItem[]>("audit-logs", { params });
+      const res = await apiClient<AuditLogItem[]>("/audit-logs", { params });
       setLogs(res.data || []);
       setTotal(res.meta?.total || 0);
     } catch (err) {
@@ -69,8 +73,10 @@ export default function AuditLogPage() {
   };
 
   useEffect(() => {
-    fetchLogs();
-  }, [page, modelFilter, actionFilter]);
+    if (status === "AUTHENTICATED") {
+      fetchLogs();
+    }
+  }, [status, activeCompany?.id, page, modelFilter, actionFilter]);
 
   const getActionBadge = (action: string) => {
     switch (action) {
@@ -93,7 +99,8 @@ export default function AuditLogPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <AppShell>
+      <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5">
         <div>
@@ -408,6 +415,7 @@ export default function AuditLogPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </AppShell>
   );
 }
