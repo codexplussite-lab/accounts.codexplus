@@ -32,6 +32,12 @@ jobs:
 
       - name: Run Backend Vitest Test Suite
         run: npm test
+        env:
+          NODE_ENV: test
+          DATABASE_URL: "mysql://test:test@127.0.0.1:3306/test_db"
+          JWT_ACCESS_SECRET: "test-access-secret-key-at-least-32-characters-long"
+          JWT_REFRESH_SECRET: "test-refresh-secret-key-at-least-32-characters-long"
+          CORS_ORIGIN: "http://localhost:3000"
 
       - name: Compile Backend TypeScript
         run: npm run build
