@@ -1,0 +1,44 @@
+name: Deploy Accounts ERP to VPS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            set -e
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+            git config --global --add safe.directory /www/wwwroot/accounts.codexplus.site
+            cd /www/wwwroot/accounts.codexplus.site
+            git fetch origin main
+            git reset --hard origin/main
+
+            # Backend Build & Database Sync
+            cd /www/wwwroot/accounts.codexplus.site/backend
+            npm ci || npm install
+            npx prisma generate
+            npx prisma db push
+            npm run build
+
+            # Frontend Build
+            cd /www/wwwroot/accounts.codexplus.site/frontend
+            npm ci || npm install
+            npm run build
+
+            # Zero-downtime PM2 Reload
+            cd /www/wwwroot/accounts.codexplus.site
+            pm2 reload ecosystem.config.cjs --update-env
+            pm2 save

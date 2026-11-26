@@ -10,21 +10,21 @@ module.exports = {
       max_memory_restart: "500M",
       env: {
         NODE_ENV: "production",
-        PORT: 4000
+        PORT: 4008
       }
     },
     {
       name: "accounting-frontend",
       cwd: "./frontend",
       script: "node_modules/next/dist/bin/next",
-      args: "start -p 3000",
+      args: "start -p 3008",
       instances: 1,
       autorestart: true,
       watch: false,
       max_memory_restart: "1G",
       env: {
         NODE_ENV: "production",
-        PORT: 3000
+        PORT: 3008
       }
     }
   ]
