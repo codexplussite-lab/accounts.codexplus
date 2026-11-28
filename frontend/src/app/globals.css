@@ -4,6 +4,8 @@
 
 @layer base {
   :root {
+    --font-sans: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
     --canvas: 248 249 250;
     --surface: 255 255 255;
     --border: 228 231 236;
