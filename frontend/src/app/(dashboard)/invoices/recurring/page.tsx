@@ -171,15 +171,15 @@ export default function RecurringInvoicesPage() {
               <Link href="/invoices" className="text-ink-secondary hover:text-ink-primary transition-colors">
                 <ArrowLeft className="w-4 h-4" />
               </Link>
-              <h1 className="text-xl font-bold tracking-tight text-ink-primary font-heading">
-                Recurring Invoices Engine
+              <h1 className="text-xl font-semibold tracking-tight text-ink-primary">
+                Recurring Invoices
               </h1>
-              <Badge variant="outline" className="font-mono text-[10px]">
-                AUTOMATED BILLING
-              </Badge>
+              <span className="font-mono text-[11px] text-ink-secondary">
+                Scheduled billing
+              </span>
             </div>
             <p className="text-xs text-ink-secondary mt-1">
-              Automate scheduled client invoicing with deterministic date progressions and sequential document numbering.
+              Scheduled client invoicing with sequential document numbering
             </p>
           </div>
 

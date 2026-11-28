@@ -152,14 +152,14 @@ export default function TeamManagementPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5">
         <div>
-          <div className="flex items-center space-x-2.5">
-            <h1 className="text-xl font-bold tracking-tight text-ink-primary">Team & Access Control (RBAC)</h1>
-            <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800 border border-emerald-200">
-              Multi-Tenant Governance
+          <div className="flex items-center space-x-3">
+            <h1 className="text-xl font-semibold tracking-tight text-ink-primary">Team & Roles</h1>
+            <span className="font-mono text-[11px] text-ink-secondary">
+              Access control
             </span>
           </div>
           <p className="text-xs text-ink-secondary mt-1">
-            Manage company memberships and enforce strict role boundaries across Owner, Accountant, Cashier, and Auditor tiers.
+            Manage company memberships and role permissions across Owner, Accountant, Cashier, and Auditor
           </p>
         </div>
 

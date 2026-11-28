@@ -104,14 +104,14 @@ export default function AuditLogPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5">
         <div>
-          <div className="flex items-center space-x-2.5">
-            <h1 className="text-xl font-bold tracking-tight text-ink-primary">Audit Trail & Compliance</h1>
-            <span className="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800 border border-emerald-200">
-              Immutable Ledger
+          <div className="flex items-center space-x-3">
+            <h1 className="text-xl font-semibold tracking-tight text-ink-primary">Audit Log</h1>
+            <span className="font-mono text-[11px] text-ink-secondary">
+              Append-only trail
             </span>
           </div>
           <p className="text-xs text-ink-secondary mt-1">
-            Tamper-evident, append-only operational log recording every create, post, modification, and security event.
+            Operational log recording create, post, update, void, and sign-in events
           </p>
         </div>
 

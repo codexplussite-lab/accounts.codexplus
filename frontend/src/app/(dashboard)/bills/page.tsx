@@ -103,24 +103,25 @@ export default function BillsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5">
           <div>
             <div className="flex items-center space-x-2.5">
-              <Receipt className="h-5 w-5 text-emerald-800" />
-              <h1 className="text-xl font-bold tracking-tight text-ink-primary">Purchase Bills</h1>
+              <Receipt className="h-4 w-4 text-ink-secondary stroke-[1.5]" />
+              <h1 className="text-xl font-semibold tracking-tight text-ink-primary">Purchase Bills</h1>
             </div>
             <p className="mt-1 text-xs text-ink-secondary">
-              Vendor bills, stock replenishment, weighted average cost recalculation, and payment disbursements.
+              Vendor bills, stock replenishment, weighted average cost, and disbursements
             </p>
           </div>
 
           <div className="flex items-center gap-2.5">
             <Button variant="outline" size="sm" onClick={fetchBills} disabled={loading} className="h-8 text-xs">
-              <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`h-4 w-4 mr-1.5 text-ink-secondary stroke-[1.5] ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
-            <Link href="/bills/new">
-              <Button size="sm" className="h-8 text-xs bg-emerald-800 hover:bg-emerald-900 text-white">
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Record Bill
-              </Button>
+            <Link
+              href="/bills/new"
+              className="inline-flex items-center justify-center rounded-md bg-emerald-brand hover:bg-emerald-900 text-white h-8 px-3 text-xs font-medium transition-colors"
+            >
+              <Plus className="h-4 w-4 mr-1.5 stroke-[1.5]" />
+              Record Bill
             </Link>
           </div>
         </div>

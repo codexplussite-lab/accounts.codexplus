@@ -113,11 +113,11 @@ export default function ContactsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5">
           <div>
             <div className="flex items-center space-x-2.5">
-              <Users className="h-5 w-5 text-emerald-800" />
-              <h1 className="text-xl font-bold tracking-tight text-ink-primary">Contacts Directory</h1>
+              <Users className="h-4 w-4 text-ink-secondary stroke-[1.5]" />
+              <h1 className="text-xl font-semibold tracking-tight text-ink-primary">Contacts Directory</h1>
             </div>
             <p className="mt-1 text-xs text-ink-secondary">
-              Customers, Vendors, and dynamic double-entry ledger balances.
+              Customers, vendors, and live double-entry ledger balances
             </p>
           </div>
 

@@ -172,12 +172,12 @@ function ReportsDashboardContent() {
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-4">
           <div>
-            <div className="flex items-center space-x-2">
-              <BarChart3 className="h-5 w-5 text-emerald-700" />
-              <h1 className="text-xl font-bold tracking-tight text-ink-primary">Financial Reporting Center</h1>
+            <div className="flex items-center space-x-2.5">
+              <BarChart3 className="h-4 w-4 text-ink-secondary stroke-[1.5]" />
+              <h1 className="text-xl font-semibold tracking-tight text-ink-primary">Financial Reports</h1>
             </div>
-            <p className="text-xs text-ink-secondary mt-0.5">
-              GAAP & IFRS compliant double-entry reports, immutable General Ledger, Trial Balance, P&L, Balance Sheet, and Ageing analysis.
+            <p className="text-xs text-ink-secondary mt-1">
+              General Ledger, Trial Balance, P&L, Balance Sheet, Cash Flow, and Ageing analysis
             </p>
           </div>
 

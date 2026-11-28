@@ -194,16 +194,16 @@ export default function BulkImportStudioPage() {
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
           <div>
-            <div className="flex items-center space-x-2.5">
-              <h1 className="text-xl font-bold tracking-tight text-ink-primary font-heading">
-                Bulk CSV Data Import Studio
+            <div className="flex items-center space-x-3">
+              <h1 className="text-xl font-semibold tracking-tight text-ink-primary">
+                CSV Data Import
               </h1>
-              <Badge variant="outline" className="font-mono text-[10px]">
-                ERP MIGRATION
-              </Badge>
+              <span className="font-mono text-[11px] text-ink-secondary">
+                Bulk onboarding
+              </span>
             </div>
             <p className="text-xs text-ink-secondary mt-1">
-              Safely onboard existing Chart of Accounts, Customers/Vendors, and Products with atomic Opening Stock double-entry journals.
+              Import Chart of Accounts, contacts, and products with opening stock journals
             </p>
           </div>
 

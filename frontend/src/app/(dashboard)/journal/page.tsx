@@ -85,11 +85,12 @@ export default function JournalPage() {
             <h1 className="text-base font-semibold text-ink-primary tracking-tight">General Journal</h1>
             <p className="text-xs text-ink-secondary">Double-entry ledger journal entries, postings, and audit trails</p>
           </div>
-          <Link href="/journal/new">
-            <Button variant="emerald" className="shadow-subtle">
-              <Plus className="w-3.5 h-3.5 mr-1.5" />
-              New Journal Entry
-            </Button>
+          <Link
+            href="/journal/new"
+            className="inline-flex items-center justify-center rounded-md bg-emerald-brand hover:bg-emerald-900 text-white h-8 px-3 text-xs font-medium transition-colors"
+          >
+            <Plus className="w-4 h-4 mr-1.5 stroke-[1.5]" />
+            New Journal Entry
           </Link>
         </div>
 

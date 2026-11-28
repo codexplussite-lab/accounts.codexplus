@@ -205,12 +205,12 @@ export default function InventoryPage() {
         {/* Top Header & Fast Nav */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-border pb-5">
           <div>
-            <div className="flex items-center space-x-2">
-              <Package className="h-5 w-5 text-emerald-700" />
-              <h1 className="text-xl font-bold tracking-tight text-ink-primary">Inventory & Stock Tracking</h1>
+            <div className="flex items-center space-x-2.5">
+              <Package className="h-4 w-4 text-ink-secondary stroke-[1.5]" />
+              <h1 className="text-xl font-semibold tracking-tight text-ink-primary">Inventory & Stock</h1>
             </div>
             <p className="mt-1 text-xs text-ink-secondary">
-              Real-time ledger-derived stock movements, multi-warehouse balances, and WAC inventory valuation.
+              Ledger-derived stock movements, multi-warehouse balances, and WAC valuation
             </p>
           </div>
 

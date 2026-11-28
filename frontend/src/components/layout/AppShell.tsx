@@ -114,15 +114,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       {/* Left Navigation Rail (Slide-over drawer on mobile, fixed rail on desktop) */}
       <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-surface transition-all duration-200 ease-in-out",
+          "fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-surface transition-[transform,width] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)]",
           mobileOpen ? "translate-x-0 w-64" : "-translate-x-full md:translate-x-0",
           collapsed ? "md:w-16" : "md:w-60"
         )}
       >
         {/* Company Switcher Header */}
-        <div className="flex h-14 items-center justify-between border-b border-border px-3.5">
-          <div className="flex items-center space-x-2.5 overflow-hidden flex-1">
-            <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded bg-ink-primary text-xs font-mono font-bold text-white shadow-subtle">
+        <div className="flex h-14 items-center justify-between border-b border-border px-4">
+          <div className="flex items-center space-x-3 overflow-hidden flex-1">
+            <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg bg-ink-primary text-xs font-mono font-medium text-white">
               {companyInitials}
             </div>
             {!collapsed && (
@@ -131,7 +131,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <select
                     value={activeCompany?.id || ""}
                     onChange={(e) => switchCompany(e.target.value)}
-                    className="w-full bg-transparent text-xs font-semibold text-ink-primary truncate focus:outline-none cursor-pointer"
+                    className="w-full bg-transparent text-xs font-medium text-ink-primary truncate focus:outline-none cursor-pointer"
                   >
                     {companies.map((c) => (
                       <option key={c.id} value={c.id} className="bg-surface text-ink-primary">
@@ -140,11 +140,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     ))}
                   </select>
                 ) : (
-                  <div className="truncate text-xs font-semibold text-ink-primary">
+                  <div className="truncate text-xs font-medium text-ink-primary">
                     {activeCompany?.name || "Enterprise Ledger"}
                   </div>
                 )}
-                <p className="text-[10px] font-mono text-ink-secondary">
+                <p className="text-[11px] font-mono text-ink-secondary">
                   {activeCompany?.currency || "PKR"} · Fiscal 2026
                 </p>
               </div>
@@ -152,14 +152,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
           <button
             onClick={() => setCollapsed(!collapsed)}
-            className="hidden md:flex h-6 w-6 items-center justify-center rounded text-ink-secondary hover:bg-canvas hover:text-ink-primary transition-colors ml-1"
+            className="hidden md:flex h-7 w-7 items-center justify-center rounded-md text-ink-secondary hover:bg-canvas hover:text-ink-primary transition-colors ml-1"
             title={collapsed ? "Expand rail" : "Collapse rail"}
           >
-            {collapsed ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
+            {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
           </button>
           <button
             onClick={() => setMobileOpen(false)}
-            className="flex md:hidden h-7 w-7 items-center justify-center rounded text-ink-secondary hover:bg-canvas hover:text-ink-primary transition-colors ml-1"
+            className="flex md:hidden h-8 w-8 items-center justify-center rounded-md text-ink-secondary hover:bg-canvas hover:text-ink-primary transition-colors ml-1"
             aria-label="Close navigation menu"
           >
             <X className="h-4 w-4" />
@@ -167,7 +167,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Navigation Links */}
-        <nav className="flex-1 space-y-0.5 p-2 overflow-y-auto">
+        <nav className="flex-1 space-y-1 p-3 overflow-y-auto">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = pathname === item.href;
@@ -176,15 +176,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "flex items-center rounded px-2.5 py-2 text-xs font-medium transition-colors",
+                  "flex h-9 items-center rounded-lg px-2.5 text-[13px] transition-colors",
                   isActive
-                    ? "bg-canvas text-ink-primary font-semibold shadow-subtle border border-border"
-                    : "text-ink-secondary hover:bg-canvas hover:text-ink-primary border border-transparent"
+                    ? "bg-canvas text-ink-primary font-medium border border-border"
+                    : "text-ink-secondary font-normal hover:bg-canvas/70 hover:text-ink-primary border border-transparent"
                 )}
                 title={collapsed ? item.label : undefined}
               >
-                <Icon className={cn("h-4 w-4 flex-shrink-0", isActive ? "text-emerald-brand" : "text-ink-secondary")} />
-                {!collapsed && <span className="ml-2.5 truncate">{item.label}</span>}
+                <Icon className={cn("h-4 w-4 flex-shrink-0 stroke-[1.5]", isActive ? "text-emerald-brand" : "text-ink-secondary")} />
+                {!collapsed && <span className="ml-3 truncate">{item.label}</span>}
               </Link>
             );
           })}
@@ -193,8 +193,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {/* User Scope Footer with Logout */}
         <div className="border-t border-border p-3">
           <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2.5 overflow-hidden">
-              <div className="h-6 w-6 rounded-full bg-emerald-light border border-emerald-border flex items-center justify-center text-[10px] font-bold text-emerald-brand font-mono flex-shrink-0">
+            <div className="flex items-center space-x-3 overflow-hidden">
+              <div className="h-7 w-7 rounded-full bg-canvas border border-border flex items-center justify-center text-[11px] font-medium text-ink-primary font-mono flex-shrink-0">
                 {userInitials}
               </div>
               {!collapsed && (
@@ -202,8 +202,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                   <p className="truncate text-xs font-medium text-ink-primary leading-tight">
                     {user?.name || "User"}
                   </p>
-                  <p className="text-[10px] font-mono text-emerald-brand uppercase font-semibold">
-                    {activeCompany?.role || "MEMBER"}
+                  <p className="text-[11px] font-mono text-ink-secondary capitalize">
+                    {(activeCompany?.role || "member").toLowerCase()}
                   </p>
                 </div>
               )}
@@ -211,10 +211,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             {!collapsed && (
               <button
                 onClick={logout}
-                className="text-ink-muted hover:text-rose-600 transition-colors p-1"
-                title="Sign out of ERP"
+                className="text-ink-secondary hover:text-rose-600 transition-colors p-1.5 rounded-md hover:bg-canvas"
+                title="Sign out"
               >
-                <LogOut className="w-3.5 h-3.5" />
+                <LogOut className="w-4 h-4 stroke-[1.5]" />
               </button>
             )}
           </div>
@@ -222,18 +222,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Main Content Area */}
-      <div className={cn("flex flex-1 flex-col min-w-0 transition-all duration-200 pl-0", collapsed ? "md:pl-16" : "md:pl-60")}>
+      <div className={cn("flex flex-1 flex-col min-w-0 transition-[padding] duration-200 ease-[cubic-bezier(0.22,1,0.36,1)] pl-0", collapsed ? "md:pl-16" : "md:pl-60")}>
         {/* Sticky Top Header */}
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b border-border bg-surface px-4 sm:px-6 gap-3">
           <div className="flex items-center space-x-2 text-xs min-w-0">
             <button
               onClick={() => setMobileOpen(true)}
-              className="flex md:hidden h-8 w-8 items-center justify-center rounded border border-border bg-canvas text-ink-primary hover:bg-surface mr-1 flex-shrink-0"
+              className="flex md:hidden h-8 w-8 items-center justify-center rounded-md border border-border bg-canvas text-ink-primary hover:bg-surface mr-1 flex-shrink-0"
               aria-label="Open navigation menu"
             >
               <Menu className="h-4 w-4" />
             </button>
-            <span className="text-ink-secondary truncate hidden sm:inline">{activeCompany?.name || "Acme Enterprise"}</span>
+            <span className="text-ink-secondary truncate hidden sm:inline">{activeCompany?.name || "Enterprise Ledger"}</span>
             <span className="text-border hidden sm:inline">/</span>
             <span className="font-medium text-ink-primary truncate">
               {NAV_ITEMS.find((n) => n.href === pathname)?.label || "Workspace"}
@@ -242,35 +242,35 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
           {/* Telemetry Status Bar */}
           <div className="flex items-center space-x-3 text-xs flex-shrink-0">
-            <div className="flex items-center space-x-2 rounded border border-border bg-canvas px-2 sm:px-2.5 py-1">
+            <div className="flex items-center space-x-2 rounded-md border border-border bg-canvas px-2.5 py-1">
               <span
                 className={cn(
                   "h-2 w-2 rounded-full flex-shrink-0",
                   loadingHealth
-                    ? "bg-amber-400 animate-pulse"
+                    ? "bg-amber-500"
                     : health?.status === "ok"
-                    ? "bg-emerald-500 animate-pulse"
+                    ? "bg-emerald-600"
                     : "bg-rose-500"
                 )}
               />
               <span className="font-mono text-[11px] text-ink-secondary">
-                <span className="hidden sm:inline">Backend: </span>
+                <span className="hidden sm:inline">API: </span>
                 {loadingHealth
-                  ? "Probing..."
+                  ? "Checking"
                   : health?.status === "ok"
                   ? "Online"
                   : "Offline"}
                 {health?.status === "ok" && health?.database === "connected" && (
-                  <span className="hidden lg:inline"> · DB Connected</span>
+                  <span className="hidden lg:inline"> · DB connected</span>
                 )}
               </span>
               <button
                 onClick={verifyHealth}
                 className="text-ink-secondary hover:text-ink-primary transition-colors ml-1"
-                title="Refresh Backend Telemetry"
-                aria-label="Refresh Backend Telemetry"
+                title="Refresh API status"
+                aria-label="Refresh API status"
               >
-                <RefreshCw className={cn("h-3 w-3", loadingHealth && "animate-spin")} />
+                <RefreshCw className={cn("h-3.5 w-3.5", loadingHealth && "animate-spin")} />
               </button>
             </div>
           </div>

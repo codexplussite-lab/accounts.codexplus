@@ -26,8 +26,6 @@ import {
   ShieldCheck
 } from "lucide-react";
 import { AppShell } from "@/components/layout/AppShell";
-import SpotlightCard from "@/components/react-bits/SpotlightCard";
-import Counter from "@/components/react-bits/Counter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -139,20 +137,21 @@ export default function ExecutiveDashboard() {
         {/* Executive Action Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-4">
           <div>
-            <div className="flex items-center space-x-2.5">
-              <h1 className="text-xl font-bold tracking-tight text-ink-primary font-heading">
-                Executive Financial Dashboard
+            <div className="flex items-center space-x-3">
+              <h1 className="text-xl font-semibold tracking-tight text-ink-primary">
+                Financial Overview
               </h1>
-              <Badge variant="paid" className="font-mono text-[10px]">
-                LIVE LEDGER
-              </Badge>
+              <span className="inline-flex items-center gap-1.5 rounded-md bg-emerald-light border border-emerald-border px-2 py-0.5 text-[11px] font-mono text-emerald-brand">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-brand" />
+                Live ledger
+              </span>
             </div>
             <p className="text-xs text-ink-secondary mt-1">
-              Multi-tenant, double-entry financial telemetry derived directly from immutable posted journal entries.
+              Cash, receivables, payables, and posted profit for {activeCompany?.name || "your company"}
             </p>
           </div>
 
-          <div className="flex items-center space-x-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -160,20 +159,22 @@ export default function ExecutiveDashboard() {
               disabled={loading}
               className="text-xs font-mono h-8"
             >
-              <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${loading ? "animate-spin" : ""}`} />
+              <RefreshCw className={`w-4 h-4 mr-1.5 text-ink-secondary stroke-[1.5] ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
-            <Link href="/invoices">
-              <Button size="sm" className="bg-emerald-brand hover:bg-emerald-900 text-white text-xs h-8">
-                <PlusCircle className="w-3.5 h-3.5 mr-1.5" />
-                New Invoice
-              </Button>
+            <Link
+              href="/invoices"
+              className="inline-flex items-center justify-center rounded-md bg-emerald-brand hover:bg-emerald-900 text-white text-xs font-medium h-8 px-3 transition-colors"
+            >
+              <PlusCircle className="w-4 h-4 mr-1.5 stroke-[1.5]" />
+              New Invoice
             </Link>
-            <Link href="/tools/import">
-              <Button variant="outline" size="sm" className="text-xs h-8">
-                <Database className="w-3.5 h-3.5 mr-1.5" />
-                CSV Import
-              </Button>
+            <Link
+              href="/tools/import"
+              className="inline-flex items-center justify-center rounded-md border border-border bg-surface hover:bg-canvas text-ink-primary text-xs font-medium h-8 px-3 transition-colors"
+            >
+              <Database className="w-4 h-4 mr-1.5 text-ink-secondary stroke-[1.5]" />
+              CSV Import
             </Link>
           </div>
         </div>
@@ -193,158 +194,86 @@ export default function ExecutiveDashboard() {
         {/* 1. Core Financial Liquidity & AR/AP Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Card 1: Cash Balance */}
-          <SpotlightCard
-            theme="light"
-            spotlightColor="rgba(6, 95, 70, 0.08)"
-            className="p-4 bg-surface border border-border rounded-lg shadow-subtle"
-          >
-            <div className="flex items-center justify-between text-xs text-ink-secondary mb-1">
-              <span className="flex items-center gap-1.5 font-medium">
-                <Wallet className="w-3.5 h-3.5 text-emerald-brand" /> Cash On Hand
+          <div className="p-5 bg-surface border border-border rounded-xl shadow-subtle">
+            <div className="flex items-center justify-between text-xs text-ink-secondary">
+              <span className="flex items-center gap-2 font-medium text-ink-secondary">
+                <Wallet className="w-4 h-4 text-ink-secondary stroke-[1.5]" />
+                Cash on hand
               </span>
-              <span className="text-[10px] font-mono text-ink-secondary">Account 1001</span>
+              <span className="text-[11px] font-mono text-ink-muted">1001</span>
             </div>
-            <div className="text-2xl font-bold font-mono text-ink-primary tabular-nums tracking-tight mt-1">
-              PKR{" "}
-              {loading ? (
-                <span className="animate-pulse text-zinc-300">0.00</span>
-              ) : (
-                <Counter
-                  value={parseNumber(data?.balances.cash)}
-                  direction="up"
-                  duration={0.8}
-                  tabular
-                  fontSize="1.5rem"
-                  fontWeight={700}
-                />
-              )}
+            <div className="text-2xl font-medium font-mono text-ink-primary tabular-nums tracking-tight mt-3">
+              PKR {loading ? "0.00" : formatPKR(data?.balances.cash || "0.00")}
             </div>
-            <div className="mt-2 text-[11px] text-ink-secondary flex items-center justify-between border-t border-border/60 pt-2">
-              <span>Immediate Liquidity</span>
-              <span className="font-mono tabular-nums text-ink-primary">
-                {formatPKR(data?.balances.cash || "0.00")}
-              </span>
-            </div>
-          </SpotlightCard>
+            <p className="mt-2 text-[11px] text-ink-secondary">
+              Immediate cash liquidity
+            </p>
+          </div>
 
           {/* Card 2: Bank Balance */}
-          <SpotlightCard
-            theme="light"
-            spotlightColor="rgba(6, 95, 70, 0.08)"
-            className="p-4 bg-surface border border-border rounded-lg shadow-subtle"
-          >
-            <div className="flex items-center justify-between text-xs text-ink-secondary mb-1">
-              <span className="flex items-center gap-1.5 font-medium">
-                <Landmark className="w-3.5 h-3.5 text-blue-600" /> Bank Balance
+          <div className="p-5 bg-surface border border-border rounded-xl shadow-subtle">
+            <div className="flex items-center justify-between text-xs text-ink-secondary">
+              <span className="flex items-center gap-2 font-medium text-ink-secondary">
+                <Landmark className="w-4 h-4 text-ink-secondary stroke-[1.5]" />
+                Bank balance
               </span>
-              <span className="text-[10px] font-mono text-ink-secondary">Account 1002</span>
+              <span className="text-[11px] font-mono text-ink-muted">1002</span>
             </div>
-            <div className="text-2xl font-bold font-mono text-ink-primary tabular-nums tracking-tight mt-1">
-              PKR{" "}
-              {loading ? (
-                <span className="animate-pulse text-zinc-300">0.00</span>
-              ) : (
-                <Counter
-                  value={parseNumber(data?.balances.bank)}
-                  direction="up"
-                  duration={0.8}
-                  tabular
-                  fontSize="1.5rem"
-                  fontWeight={700}
-                />
-              )}
+            <div className="text-2xl font-medium font-mono text-ink-primary tabular-nums tracking-tight mt-3">
+              PKR {loading ? "0.00" : formatPKR(data?.balances.bank || "0.00")}
             </div>
-            <div className="mt-2 text-[11px] text-ink-secondary flex items-center justify-between border-t border-border/60 pt-2">
-              <span>Operating Deposits</span>
-              <span className="font-mono tabular-nums text-ink-primary">
-                {formatPKR(data?.balances.bank || "0.00")}
-              </span>
-            </div>
-          </SpotlightCard>
+            <p className="mt-2 text-[11px] text-ink-secondary">
+              Operating bank deposits
+            </p>
+          </div>
 
           {/* Card 3: Accounts Receivable */}
-          <SpotlightCard
-            theme="light"
-            spotlightColor="rgba(6, 95, 70, 0.08)"
-            className="p-4 bg-surface border border-border rounded-lg shadow-subtle"
-          >
-            <div className="flex items-center justify-between text-xs text-ink-secondary mb-1">
-              <span className="flex items-center gap-1.5 font-medium">
-                <FileText className="w-3.5 h-3.5 text-amber-600" /> Accounts Receivable
+          <div className="p-5 bg-surface border border-border rounded-xl shadow-subtle">
+            <div className="flex items-center justify-between text-xs text-ink-secondary">
+              <span className="flex items-center gap-2 font-medium text-ink-secondary">
+                <FileText className="w-4 h-4 text-ink-secondary stroke-[1.5]" />
+                Accounts receivable
               </span>
-              <span className="text-[10px] font-mono text-ink-secondary">Account 1100</span>
+              <span className="text-[11px] font-mono text-ink-muted">1100</span>
             </div>
-            <div className="text-2xl font-bold font-mono text-ink-primary tabular-nums tracking-tight mt-1">
-              PKR{" "}
-              {loading ? (
-                <span className="animate-pulse text-zinc-300">0.00</span>
-              ) : (
-                <Counter
-                  value={parseNumber(data?.balances.accountsReceivable)}
-                  direction="up"
-                  duration={0.8}
-                  tabular
-                  fontSize="1.5rem"
-                  fontWeight={700}
-                />
-              )}
+            <div className="text-2xl font-medium font-mono text-ink-primary tabular-nums tracking-tight mt-3">
+              PKR {loading ? "0.00" : formatPKR(data?.balances.accountsReceivable || "0.00")}
             </div>
-            <div className="mt-2 text-[11px] text-ink-secondary flex items-center justify-between border-t border-border/60 pt-2">
-              <span>Customer Inflow Due</span>
-              <span className="font-mono tabular-nums text-ink-primary">
-                {formatPKR(data?.balances.accountsReceivable || "0.00")}
-              </span>
-            </div>
-          </SpotlightCard>
+            <p className="mt-2 text-[11px] text-ink-secondary">
+              Unpaid customer invoices
+            </p>
+          </div>
 
           {/* Card 4: Accounts Payable */}
-          <SpotlightCard
-            theme="light"
-            spotlightColor="rgba(6, 95, 70, 0.08)"
-            className="p-4 bg-surface border border-border rounded-lg shadow-subtle"
-          >
-            <div className="flex items-center justify-between text-xs text-ink-secondary mb-1">
-              <span className="flex items-center gap-1.5 font-medium">
-                <Receipt className="w-3.5 h-3.5 text-rose-600" /> Accounts Payable
+          <div className="p-5 bg-surface border border-border rounded-xl shadow-subtle">
+            <div className="flex items-center justify-between text-xs text-ink-secondary">
+              <span className="flex items-center gap-2 font-medium text-ink-secondary">
+                <Receipt className="w-4 h-4 text-ink-secondary stroke-[1.5]" />
+                Accounts payable
               </span>
-              <span className="text-[10px] font-mono text-ink-secondary">Account 2001</span>
+              <span className="text-[11px] font-mono text-ink-muted">2001</span>
             </div>
-            <div className="text-2xl font-bold font-mono text-ink-primary tabular-nums tracking-tight mt-1">
-              PKR{" "}
-              {loading ? (
-                <span className="animate-pulse text-zinc-300">0.00</span>
-              ) : (
-                <Counter
-                  value={parseNumber(data?.balances.accountsPayable)}
-                  direction="up"
-                  duration={0.8}
-                  tabular
-                  fontSize="1.5rem"
-                  fontWeight={700}
-                />
-              )}
+            <div className="text-2xl font-medium font-mono text-ink-primary tabular-nums tracking-tight mt-3">
+              PKR {loading ? "0.00" : formatPKR(data?.balances.accountsPayable || "0.00")}
             </div>
-            <div className="mt-2 text-[11px] text-ink-secondary flex items-center justify-between border-t border-border/60 pt-2">
-              <span>Vendor Liabilities</span>
-              <span className="font-mono tabular-nums text-ink-primary">
-                {formatPKR(data?.balances.accountsPayable || "0.00")}
-              </span>
-            </div>
-          </SpotlightCard>
+            <p className="mt-2 text-[11px] text-ink-secondary">
+              Outstanding vendor bills
+            </p>
+          </div>
         </div>
 
         {/* 2. P&L Performance & Monthly Financial Trends */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Executive P&L Scorecard */}
-          <Card className="border-border shadow-subtle">
+          <Card className="border-border shadow-subtle rounded-xl">
             <CardHeader className="pb-3 border-b border-border/60">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-semibold flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-emerald-brand" /> Net Profit & Margins
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-ink-secondary stroke-[1.5]" /> Net profit & margins
                 </CardTitle>
-                <Badge variant="outline" className="text-[10px] font-mono">
-                  MARGIN: {data?.pnl.profitMargin || "0.0%"}
-                </Badge>
+                <span className="text-[11px] font-mono text-ink-secondary">
+                  Margin {data?.pnl.profitMargin || "0.0%"}
+                </span>
               </div>
             </CardHeader>
             <CardContent className="pt-4 space-y-4">
